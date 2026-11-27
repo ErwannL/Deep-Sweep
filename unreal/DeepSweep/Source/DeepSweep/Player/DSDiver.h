@@ -79,6 +79,7 @@ protected:
 	UPROPERTY(Transient) TObjectPtr<UInputAction> IA_Vertical;
 	UPROPERTY(Transient) TObjectPtr<UInputAction> IA_Grab;
 	UPROPERTY(Transient) TObjectPtr<UInputAction> IA_Action;
+	UPROPERTY(Transient) TObjectPtr<UInputAction> IA_Menu;
 
 	void BuildInput();
 	void Move(const FInputActionValue& Value);
@@ -88,6 +89,7 @@ protected:
 	UFUNCTION(Server, Reliable) void Server_Interact(class ADSInteractable* Target);
 	UFUNCTION(Server, Reliable) void Server_NozzleAction();
 	UFUNCTION(Server, Reliable) void Server_RequestRestart();
+	UFUNCTION(Server, Reliable) void Server_SetDisplayName(const FString& NewName);
 	UPROPERTY(Replicated) float StunUntil = -1.f;
 	UPROPERTY(ReplicatedUsing = OnRep_CarryingGiant) TObjectPtr<ADSGiantPickup> CarryingGiant;
 	UFUNCTION() void OnRep_CarryingGiant();
@@ -107,6 +109,9 @@ private:
 	void RunGiantScenario();
 	void RunShopScenario();
 	void RunOctoScenario();
+	void RunNetHostScenario(int32 Expected);
+	void RunNetClientScenario();
+	void MenuPressed();
 	FVector CarryIntent = FVector::ZeroVector;
 	FVector PendingIntent = FVector::ZeroVector;
 	bool bIntentThisFrame = false;

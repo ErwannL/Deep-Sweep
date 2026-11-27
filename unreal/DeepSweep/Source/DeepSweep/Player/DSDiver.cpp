@@ -27,6 +27,9 @@
 #include "Upgrades/DSUpgradePad.h"
 #include "Events/DSOctopus.h"
 #include "GameFramework/GameModeBase.h"
+#include "Net/DSSessionSubsystem.h"
+#include "GameFramework/PlayerState.h"
+#include "Engine/GameInstance.h"
 #include "Pickups/DSPickupManager.h"
 #include "Pickups/DSPickupData.h"
 #include "Core/DSGameState.h"
@@ -50,6 +53,10 @@ static TAutoConsoleVariable<int32> CVarTestShop(TEXT("ds.TestShop"), 0,
 	TEXT("Debug : scenario auto credits -> achat des 5 ameliorations -> verification des effets."));
 static TAutoConsoleVariable<int32> CVarTestOcto(TEXT("ds.TestOcto"), 0,
 	TEXT("Debug : scenario auto poulpe voleur -> capture -> ecran de fin."));
+static TAutoConsoleVariable<int32> CVarTestNet(TEXT("ds.TestNet"), 0,
+	TEXT("Debug hote : attend N joueurs puis coffre a plusieurs + aspiration d un collegue + debit."));
+static TAutoConsoleVariable<int32> CVarTestNetClient(TEXT("ds.TestNetClient"), 0,
+	TEXT("Debug client : journalise la replication et pousse le coffre."));
 static TAutoConsoleVariable<float> CVarShotAt(TEXT("ds.ShotAt"), 0.f,
 	TEXT("Debug : capture d'ecran a T secondes puis quitte (0 = desactive)."));
 
@@ -181,6 +188,7 @@ void ADSDiver::BuildInput()
 	IA_Vertical = NewAction(TEXT("IA_Vertical"), EInputActionValueType::Axis1D);
 	IA_Grab = NewAction(TEXT("IA_Grab"), EInputActionValueType::Boolean);
 	IA_Action = NewAction(TEXT("IA_Action"), EInputActionValueType::Boolean);
+	IA_Menu = NewAction(TEXT("IA_Menu"), EInputActionValueType::Boolean);
 
 	MappingContext = NewObject<UInputMappingContext>(this, TEXT("IMC_Diver"));
 	UInputMappingContext* M = MappingContext;
@@ -221,11 +229,16 @@ void ADSDiver::BuildInput()
 	M->MapKey(IA_Action, EKeys::RightMouseButton);
 	M->MapKey(IA_Action, EKeys::Gamepad_FaceButton_Left);
 	M->MapKey(IA_Action, EKeys::Gamepad_FaceButton_Right);
+	M->MapKey(IA_Menu, EKeys::Escape);
+	M->MapKey(IA_Menu, EKeys::Gamepad_Special_Left);
 }
 
 void ADSDiver::PawnClientRestart()
 {
 	Super::PawnClientRestart();
+	// Pseudo choisi dans le menu (ou -DSName=) : envoye au serveur une fois connecte.
+	if (const UDSSessionSubsystem* SS = GetGameInstance() ? GetGameInstance()->GetSubsystem<UDSSessionSubsystem>() : nullptr)
+		if (const APlayerState* PS = GetPlayerState(); !PS || PS->GetPlayerName() != SS->PlayerName) Server_SetDisplayName(SS->PlayerName);
 	BuildInput();
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 		if (ULocalPlayer* LP = PC->GetLocalPlayer())
@@ -247,6 +260,7 @@ void ADSDiver::SetupPlayerInputComponent(UInputComponent* PIC)
 		EIC->BindAction(IA_Vertical, ETriggerEvent::Triggered, this, &ADSDiver::Vertical);
 		EIC->BindAction(IA_Grab, ETriggerEvent::Started, this, &ADSDiver::GrabPressed);
 		EIC->BindAction(IA_Action, ETriggerEvent::Started, this, &ADSDiver::ActionPressed);
+		EIC->BindAction(IA_Menu, ETriggerEvent::Started, this, &ADSDiver::MenuPressed);
 	}
 }
 
@@ -323,6 +337,20 @@ void ADSDiver::OnRep_CarryingGiant()
 void ADSDiver::Server_SetCarryIntent_Implementation(FVector_NetQuantize100 Intent)
 {
 	CarryIntent = FVector(Intent).GetClampedToMaxSize(1.f);
+}
+
+void ADSDiver::Server_SetDisplayName_Implementation(const FString& NewName)
+{
+	FString N = NewName.Left(16).TrimStartAndEnd();
+	if (N.IsEmpty() || N.Contains(FPlatformProcess::ComputerName())) return;
+	if (AGameModeBase* GM = GetWorld()->GetAuthGameMode())
+		if (APlayerController* PC = Cast<APlayerController>(Controller)) GM->ChangeName(PC, N, false);
+}
+
+void ADSDiver::MenuPressed()
+{
+	// Echap / Select : quitter la partie et revenir au menu
+	if (UDSSessionSubsystem* S = GetGameInstance() ? GetGameInstance()->GetSubsystem<UDSSessionSubsystem>() : nullptr) S->LeaveToMenu();
 }
 
 void ADSDiver::Server_RequestRestart_Implementation()
@@ -649,6 +677,8 @@ void ADSDiver::Tick(float DeltaSeconds)
 	if (IsLocallyControlled() && CVarTestGiant.GetValueOnGameThread() > 0) RunGiantScenario();
 	if (IsLocallyControlled() && CVarTestShop.GetValueOnGameThread() > 0) RunShopScenario();
 	if (IsLocallyControlled() && CVarTestOcto.GetValueOnGameThread() > 0) RunOctoScenario();
+	if (IsLocallyControlled() && HasAuthority() && CVarTestNet.GetValueOnGameThread() > 0) RunNetHostScenario(CVarTestNet.GetValueOnGameThread());
+	if (IsLocallyControlled() && !HasAuthority() && CVarTestNetClient.GetValueOnGameThread() > 0) RunNetClientScenario();
 
 	// Intention de portage : envoyee au serveur ~10 fois/s (ou des qu'elle change).
 	if (IsLocallyControlled())

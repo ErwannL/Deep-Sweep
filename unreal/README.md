@@ -19,9 +19,10 @@ Le contenu (cartes, matériaux, Data Assets…) est produit par des scripts Pyth
 .\unreal\DeepSweep\Tools\run_python.ps1 -Script unreal\DeepSweep\Content\Python\ds_materials.py
 .\unreal\DeepSweep\Tools\run_python.ps1 -Script unreal\DeepSweep\Content\Python\ds_pickups.py
 .\unreal\DeepSweep\Tools\run_python.ps1 -Script unreal\DeepSweep\Content\Python\ds_map_cove.py
+.\unreal\DeepSweep\Tools\run_python.ps1 -Script unreal\DeepSweep\Content\Python\ds_map_menu.py
 ```
 
-Ordre : compiler d'abord (les scripts utilisent les classes C++), puis `ds_materials.py`, `ds_pickups.py` (Data Assets des objets), `ds_map_cove.py`.
+Ordre : compiler d'abord (les scripts utilisent les classes C++), puis `ds_materials.py`, `ds_pickups.py` (Data Assets des objets), `ds_map_cove.py`, `ds_map_menu.py`.
 
 ## Architecture (GDD §14)
 - **Objets** : `UDSPickupData` (Data Asset par type), `ADSPickupManager` (registre de la zone), `UDSPickupSubsystem` (accès + recherche de cible), `ADSPickup` (objet actif), `UDSBuoyancyComponent`.
@@ -32,7 +33,31 @@ Ordre : compiler d'abord (les scripts utilisent les classes C++), puis `ds_mater
 > Au premier lancement, les shaders se compilent en arrière-plan : bulles et rayons peuvent n'apparaître qu'après quelques secondes.
 
 ## Lancer
-Ouvrir `unreal/DeepSweep/DeepSweep.uproject` (carte de démarrage : `/Game/Maps/L_Cove`), puis Play.
+- **Jeu** (menu principal) :
+  ```powershell
+  & "C:\Program Files\Epic Games\UE_5.4\Engine\Binaries\Win64\UnrealEditor.exe" "$PWD\unreal\DeepSweep\DeepSweep.uproject" -game -windowed -ResX=1280 -ResY=720
+  ```
+- **Éditeur** : ouvrir `unreal/DeepSweep/DeepSweep.uproject` (s'ouvre sur `/Game/Maps/L_Cove`), puis Play. En solo, Play lance directement la crique.
+
+## Héberger / rejoindre (1 à 4 joueurs, listen server)
+Le réseau passe par l'Online Subsystem **Null** (réseau local, sans compte). Steam pourra être branché plus tard sans changer le code de session.
+
+1. **Héberger** : dans le menu, saisir un pseudo puis *Héberger une partie (LAN)*. Le jeu ouvre la crique et écoute sur le port **7777** (UDP).
+2. **Rejoindre sur le même réseau** : *Chercher une partie (LAN)* puis cliquer la partie trouvée.
+3. **Rejoindre par IP** : saisir l'IP de l'hôte (ex. `192.168.1.20`) puis *Rejoindre par IP*. Sur Internet, l'hôte doit ouvrir/rediriger le port UDP 7777 (ou utiliser un VPN type LAN virtuel).
+4. **Échap** (ou Select) : quitter la partie et revenir au menu.
+
+Lancement direct par ligne de commande (tests) :
+```powershell
+# Hôte
+& "C:\Program Files\Epic Games\UE_5.4\Engine\Binaries\Win64\UnrealEditor.exe" "$PWD\unreal\DeepSweep\DeepSweep.uproject" "/Game/Maps/L_Cove?listen" -DSName=Capitaine -game -windowed
+# Client (ici avec 100 ms de latence simulée)
+& "C:\Program Files\Epic Games\UE_5.4\Engine\Binaries\Win64\UnrealEditor.exe" "$PWD\unreal\DeepSweep\DeepSweep.uproject" 127.0.0.1 -DSName=Moussaillon -game -windowed "-ExecCmds=Net PktLag=100"
+```
+
+**Mesures (4 joueurs, 100 ms de latence simulée)** : 5 à 9,5 Ko/s envoyés par client (budget GDD : 64 Ko/s) ; coffre porté à 2 et livré en 10,5 s ; aspiration d'un collègue, crédits et propreté identiques chez tous.
+
+![Menu](docs/step11_menu.png)
 
 ## Contrôles
 | Action | Clavier / souris | Manette |
@@ -45,6 +70,7 @@ Ouvrir `unreal/DeepSweep/DeepSweep.uproject` (carte de démarrage : `/Game/Maps/
 
 ## Commandes de debug (console `~`)
 - `ds.Debug 1` : compteurs objets total / dormants / actifs / collectés.
+- `ds.TestNet 4` (hôte) / `ds.TestNetClient 1` (clients) : test réseau automatique (coffre à plusieurs, aspiration d'un collègue, débit).
 - `ds.EndMatch` : termine la plongée (écran de fin).
 - `ds.TestOcto 1` : scénario automatique poulpe → capture → écran de fin.
 - `ds.TestShop 1` : scénario automatique achat des 5 améliorations + vérification des effets.
@@ -93,3 +119,4 @@ _À venir (étape 11 : menu Héberger/Rejoindre, OnlineSubsystemNull en LAN)._
 - [x] Étape 10 — Bob le robot visible au poste du levier (il vide la cuve si personne, s'écarte quand un joueur arrive) ; poulpe voleur (arrive par un bord, vole jusqu'à 3 objets de valeur, fuit ; l'attraper = butin lâché + 20 ₡ ; s'il s'échappe, le butin est caché près du bord) ; écran de fin à 100 % avec temps, crédits, stats par joueur et titres drôles, « replonger »
 
 ![Poulpe](docs/step10_octopus.png)
+- [x] Étape 11 — multijoueur listen server : menu (pseudo, héberger LAN, chercher, rejoindre par IP), sessions Online Subsystem Null, Échap = retour menu ; testé à 2 puis 4 joueurs avec `Net PktLag=100`

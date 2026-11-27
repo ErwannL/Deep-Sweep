@@ -12,4 +12,9 @@ public:
 	ADSGameMode();
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void RestartPlayer(AController* NewPlayer) override;
+	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId, const FString& Options, const FString& Portal) override;
+
+private:
+	/** Pseudo demande dans l'URL (?Name=), applique apres la connexion (le sous-systeme en ligne l'ecrase sinon). */
+	TMap<TWeakObjectPtr<APlayerController>, FString> RequestedNames;
 };

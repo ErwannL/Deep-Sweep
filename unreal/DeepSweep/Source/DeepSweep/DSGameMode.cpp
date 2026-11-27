@@ -7,6 +7,7 @@
 #include "Upgrades/DSUpgradePad.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
+#include "Kismet/GameplayStatics.h"
 
 ADSGameMode::ADSGameMode()
 {
@@ -20,7 +21,21 @@ ADSGameMode::ADSGameMode()
 void ADSGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
+	FString Wanted;
+	if (RequestedNames.RemoveAndCopyValue(NewPlayer, Wanted) && !Wanted.IsEmpty())
+		ChangeName(NewPlayer, Wanted.Left(16), false);
+	if (APlayerState* PS = NewPlayer ? NewPlayer->PlayerState : nullptr)
+		if (PS->GetPlayerName().IsEmpty() || PS->GetPlayerName().Contains(FPlatformProcess::ComputerName()))
+			ChangeName(NewPlayer, FString::Printf(TEXT("Plongeur%d"), GameState ? GameState->PlayerArray.Num() : 1), false);
 	UE_LOG(LogDeepSweep, Log, TEXT("Joueur connecte : %s (%d joueurs)"), *GetNameSafe(NewPlayer), GetNumPlayers());
+}
+
+FString ADSGameMode::InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId, const FString& Options, const FString& Portal)
+{
+	const FString Result = Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
+	const FString Wanted = UGameplayStatics::ParseOption(Options, TEXT("Name"));
+	if (!Wanted.IsEmpty() && !Wanted.Contains(FPlatformProcess::ComputerName())) RequestedNames.Add(NewPlayerController, Wanted);
+	return Result;
 }
 
 void ADSGameMode::RestartPlayer(AController* NewPlayer)
