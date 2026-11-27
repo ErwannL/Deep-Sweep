@@ -1,4 +1,4 @@
-#include "World/DSAmbienceController.h"
+﻿#include "World/DSAmbienceController.h"
 #include "Core/DSGameState.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/DirectionalLightComponent.h"
@@ -55,5 +55,5 @@ void ADSAmbienceController::Apply(float C)
 		PostProcess->Settings.bOverride_ColorSaturation = true;
 		PostProcess->Settings.ColorSaturation = FVector4(S, S, S, 1.f);
 	}
-	if (Sun) Sun->GetComponent()->SetIntensity(FMath::Lerp(DirtySun, CleanSun, K));
+	if (Sun && Sun->GetLightComponent()) Sun->GetLightComponent()->SetIntensity(FMath::Lerp(DirtySun, CleanSun, K));
 }

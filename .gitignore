@@ -13,3 +13,6 @@ unreal/**/Plugins/**/Binaries/
 unreal/**/Plugins/**/Intermediate/
 *.pyc
 __pycache__/
+unreal/Build/
+unreal/Build_uat.log
+unreal/Build_test/
