@@ -45,6 +45,7 @@ Ouvrir `unreal/DeepSweep/DeepSweep.uproject` (carte de démarrage : `/Game/Maps/
 
 ## Commandes de debug (console `~`)
 - `ds.Debug 1` : compteurs objets total / dormants / actifs / collectés.
+- `ds.TestBelt 1` : scénario automatique cuve → tapis → blocage → déblocage → vente.
 - `ds.TestVac 1` : scénario automatique prendre la buse → aspirer un tas.
 - `ds.SetClean 0.5` : force la propreté affichée (−1 = valeur réelle).
 - `ds.TestSell 1` : scénario automatique attraper → comptoir → vendre.
@@ -73,6 +74,9 @@ _À venir (étape 11 : menu Héberger/Rejoindre, OnlineSubsystemNull en LAN)._
 | Sale (0 %) | Propre (100 %) |
 |---|---|
 | ![Sale](docs/step5_dirty.png) | ![Propre](docs/step5_clean.png) |
-- [x] Étape 6 — aspirateur à 2 postes : buse sur tuyau (câble physique), console de puissance 1–3 (5 avec turbo), cuve virtualisée, levier (Bob vide si personne), bouchon de caddie (3 tapes), vases qui cassent à puissance ≥ 4, collègues aspirés à puissance ≥ 4 (ressortent par la cuve, sonnés). *Le levier vend directement en attendant le convoyeur (étape 7).*
+- [x] Étape 6 — aspirateur à 2 postes : buse sur tuyau (câble physique), console de puissance 1–3 (5 avec turbo), cuve virtualisée, levier (Bob vide si personne), bouchon de caddie (3 tapes), vases qui cassent à puissance ≥ 4, collègues aspirés à puissance ≥ 4 (ressortent par la cuve, sonnés).
 
 ![Aspirateur](docs/step6_vacuum.png)
+- [x] Étape 7 — convoyeur logique cuve → comptoir (spline + instances, éléments logiques répliqués par fast array, extrapolés côté client), blocage par caddie à mi-chemin + déblocage, objets lancés sur le tapis récupérés
+
+![Convoyeur](docs/step7_conveyor.png)

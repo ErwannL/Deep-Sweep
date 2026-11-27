@@ -27,7 +27,7 @@ public:
 	/** Serveur. */
 	virtual void Interact(ADSDiver* Diver) {}
 
-	bool IsInRange(const AActor* Diver) const;
+	virtual bool IsInRange(const AActor* Diver) const;
 	/** Meilleur interactable utilisable a portee (local ou serveur). */
 	static ADSInteractable* FindBest(const ADSDiver* Diver);
 };

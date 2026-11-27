@@ -92,6 +92,7 @@ private:
 	void RunDebugScenario();
 	void RunSellScenario();
 	void RunVacScenario();
+	void RunBeltScenario();
 	TWeakObjectPtr<ADSVacuumNozzle> HeldNozzle;
 	float CarrySpeedFactor = 1.f;
 	float BobTime = 0.f;

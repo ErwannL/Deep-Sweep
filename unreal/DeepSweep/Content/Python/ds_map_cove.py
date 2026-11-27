@@ -227,6 +227,17 @@ cons.set_editor_property("vacuum", vac)
 vac.set_editor_property("lever_actor", lever)
 vac.set_editor_property("console_actor", cons)
 
+# ---------------------------------------------------------------- Base : convoyeur cuve -> comptoir (rampe vers la tremie)
+belt = eas.spawn_actor_from_class(unreal.DSConveyor, V(BASE_X + 200, -1050, 60), R(0, 0, 0))
+belt.set_actor_label("Conveyor")
+belt.set_folder_path("Base")
+belt.set_editor_property("counter", counter)
+spl = belt.get_component_by_class(unreal.SplineComponent)
+spl.clear_spline_points(False)
+for p in (V(BASE_X + 200, -1080, 60), V(BASE_X + 200, 400, 60), V(BASE_X + 200, 1000, 230), V(BASE_X + 200, 1250, 330)):
+    spl.add_spline_point(p, unreal.SplineCoordinateSpace.WORLD, False)
+spl.update_spline()
+
 # ---------------------------------------------------------------- Ambiance sale -> coloree (proprete)
 amb = eas.spawn_actor_from_class(unreal.DSAmbienceController, V(0, 0, 0))
 amb.set_actor_label("AmbienceController")
@@ -238,7 +249,7 @@ amb.set_editor_property("collection", unreal.load_asset("/Game/Materials/MPC_DS"
 
 # ---------------------------------------------------------------- Departs joueurs (4)
 for i in range(4):
-    ps = eas.spawn_actor_from_class(unreal.PlayerStart, V(BASE_X + 300, -450 + i * 300, 250), R(0, 0, 0))
+    ps = eas.spawn_actor_from_class(unreal.PlayerStart, V(BASE_X + 800, -450 + i * 300, 250), R(0, 0, 0))
     ps.set_actor_label(f"PlayerStart{i}")
     ps.set_folder_path("Base")
 

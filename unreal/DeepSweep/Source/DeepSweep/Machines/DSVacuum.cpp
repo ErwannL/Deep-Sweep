@@ -5,6 +5,7 @@
 #include "Pickups/DSPickupSubsystem.h"
 #include "Core/DSGameState.h"
 #include "World/DSCounter.h"
+#include "Machines/DSConveyor.h"
 #include "Player/DSDiver.h"
 #include "DeepSweep.h"
 #include "CableComponent.h"
@@ -132,7 +133,14 @@ void ADSVacuum::DumpTank(AActor* By)
 		return;
 	}
 	const TArray<TObjectPtr<UDSPickupData>> Items = TakeTankContents();
-	// Etape 6 : la cuve se deverse directement au comptoir (le convoyeur arrive a l'etape 7).
+	// La cuve se deverse sur le convoyeur (vente a l'arrivee au comptoir).
+	for (TActorIterator<ADSConveyor> It(GetWorld()); It; ++It)
+	{
+		It->AddItems(Items);
+		UE_LOG(LogDeepSweep, Log, TEXT("Cuve videe sur le tapis : %d objets"), Items.Num());
+		return;
+	}
+	// Repli sans convoyeur : vente directe.
 	int32 Value = 0;
 	for (const UDSPickupData* T : Items) Value += T ? T->Value : 0;
 	for (TActorIterator<ADSCounter> It(GetWorld()); It; ++It)

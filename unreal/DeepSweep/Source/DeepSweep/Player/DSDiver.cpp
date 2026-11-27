@@ -21,6 +21,10 @@
 #include "Machines/DSVacuum.h"
 #include "Machines/DSVacuumNozzle.h"
 #include "Machines/DSVacuumControls.h"
+#include "Machines/DSConveyor.h"
+#include "Pickups/DSPickupManager.h"
+#include "Pickups/DSPickupData.h"
+#include "Core/DSGameState.h"
 #include "GameFramework/GameStateBase.h"
 #include "EngineUtils.h"
 #include "Pickups/DSPickupSubsystem.h"
@@ -33,6 +37,8 @@ static TAutoConsoleVariable<int32> CVarTestSell(TEXT("ds.TestSell"), 0,
 	TEXT("Debug : scenario auto attraper -> aller au comptoir -> vendre -> capture -> quitte."));
 static TAutoConsoleVariable<int32> CVarTestVac(TEXT("ds.TestVac"), 0,
 	TEXT("Debug : scenario auto prendre la buse -> aspirer un tas -> captures -> quitte."));
+static TAutoConsoleVariable<int32> CVarTestBelt(TEXT("ds.TestBelt"), 0,
+	TEXT("Debug : scenario auto cuve -> tapis (avec caddie qui bloque) -> deblocage -> vente."));
 static TAutoConsoleVariable<float> CVarShotAt(TEXT("ds.ShotAt"), 0.f,
 	TEXT("Debug : capture d'ecran a T secondes puis quitte (0 = desactive)."));
 
@@ -279,6 +285,55 @@ void ADSDiver::Server_NozzleAction_Implementation()
 	if (ADSVacuumNozzle* N = HeldNozzle.Get()) N->PrimaryAction(this);
 }
 
+void ADSDiver::RunBeltScenario()
+{
+	static int32 Step = 0;
+	const float T = GetWorld()->GetTimeSeconds();
+	APlayerController* PC = Cast<APlayerController>(Controller);
+	ADSConveyor* Belt = nullptr;
+	for (TActorIterator<ADSConveyor> It(GetWorld()); It; ++It) Belt = *It;
+	ADSVacuum* Vac = nullptr;
+	for (TActorIterator<ADSVacuum> It(GetWorld()); It; ++It) Vac = *It;
+	const UDSPickupSubsystem* Sub = GetWorld()->GetSubsystem<UDSPickupSubsystem>();
+	ADSPickupManager* M = Sub ? Sub->GetManager() : nullptr;
+	if (!PC || !Belt || !Vac || !M) return;
+	const float L = Belt->GetLength();
+	auto Watch = [&](float D)
+	{
+		const FVector P = Belt->GetActorLocation(); // vue de cote du tapis
+		SetActorLocation(FVector(-2350.f, -300.f + D, 350.f));
+		PC->SetControlRotation(FRotator(-18.f, 200.f, 0.f));
+	};
+	if (Step == 0 && T > 2.f)
+	{
+		// Remplit la cuve (2 canettes, 1 bouteille, 1 caddie, 3 ferrailles) puis tire le levier.
+		for (const TCHAR* N : { TEXT("Canette"), TEXT("Canette"), TEXT("Bouteille"), TEXT("Caddie"), TEXT("Ferraille"), TEXT("Ferraille"), TEXT("Vase") })
+			for (UDSPickupData* Ty : M->Types) if (Ty && Ty->TypeId == FName(N)) { Vac->StoreItem(Ty); break; }
+		Vac->DumpTank(this);
+		Watch(0.f);
+		Step = 1;
+	}
+	else if (Step == 1 && Belt->bJammed) { Step = 2; }
+	else if (Step == 2) { PC->ConsoleCommand(TEXT("shot showui")); UE_LOG(LogDeepSweep, Log, TEXT("TEST tapis bloque, %d objets"), Belt->NumItems()); Step = 3; }
+	else if (Step == 3)
+	{
+		// Va au point de blocage et debloque
+		SetActorLocation(FVector(-2850.f, 0.f, 200.f));
+		for (TActorIterator<ADSConveyor> It(GetWorld()); It; ++It) if (It->IsInRange(this)) { GrabPressed(); Step = 4; }
+		if (Step == 3) { UE_LOG(LogDeepSweep, Log, TEXT("TEST hors de portee du blocage")); Step = 4; }
+	}
+	else if (Step == 4 && !Belt->bJammed && T > 0.f) { Watch(500.f); Step = 5; }
+	else if (Step == 5 && Belt->NumItems() <= 3) { PC->ConsoleCommand(TEXT("shot showui")); Step = 6; }
+	else if (Step == 6 && Belt->NumItems() == 0)
+	{
+		const ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>();
+		UE_LOG(LogDeepSweep, Log, TEXT("TEST tapis vide, credits=%d proprete=%.3f"), GS ? GS->GetCredits() : -1, GS ? GS->GetCleanliness() : -1.f);
+		PC->ConsoleCommand(TEXT("quit"));
+		Step = 7;
+	}
+	if (T > 40.f && Step < 7) { UE_LOG(LogDeepSweep, Log, TEXT("TEST timeout step=%d items=%d jam=%d"), Step, Belt->NumItems(), Belt->bJammed); PC->ConsoleCommand(TEXT("quit")); Step = 7; }
+}
+
 void ADSDiver::RunVacScenario()
 {
 	static int32 Step = 0;
@@ -401,6 +456,7 @@ void ADSDiver::Tick(float DeltaSeconds)
 	if (IsLocallyControlled() && CVarTestGrab.GetValueOnGameThread() > 0) RunDebugScenario();
 	if (IsLocallyControlled() && CVarTestSell.GetValueOnGameThread() > 0) RunSellScenario();
 	if (IsLocallyControlled() && CVarTestVac.GetValueOnGameThread() > 0) RunVacScenario();
+	if (IsLocallyControlled() && CVarTestBelt.GetValueOnGameThread() > 0) RunBeltScenario();
 
 	// Vitesse : calculee pareil sur serveur et client (prediction) a partir d'etats repliques.
 	{
