@@ -40,6 +40,8 @@ public:
 	UDSGrabComponent* GetGrab() const { return Grab; }
 	/** Ralentissement quand on porte (applique cote serveur et client pour la prediction). */
 	void SetCarrySpeedFactor(float Factor);
+	/** Secousse de camera locale (0..1). */
+	void AddShake(float Amount) { Shake = FMath::Clamp(FMath::Max(Shake, Amount), 0.f, 1.f); }
 
 	/** Sonne (aspire par un collegue...) : plus de controle pendant Duration. Serveur. */
 	void Stun(float Duration);
@@ -119,6 +121,7 @@ private:
 	FVector LastSentIntent = FVector::ZeroVector;
 	TWeakObjectPtr<ADSVacuumNozzle> HeldNozzle;
 	float CarrySpeedFactor = 1.f;
+	float Shake = 0.f;
 	float BobTime = 0.f;
 	FRotator VisualTilt = FRotator::ZeroRotator;
 };

@@ -38,6 +38,7 @@ protected:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> Rim;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UBoxComponent> Hopper;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UTextRenderComponent> Sign;
+	UPROPERTY(VisibleAnywhere) TObjectPtr<UTextRenderComponent> SignBack;
 
 	UFUNCTION() void OnHopperOverlap(UPrimitiveComponent* OverlappedComp, AActor* Other, UPrimitiveComponent* OtherComp, int32 BodyIndex, bool bFromSweep, const FHitResult& Sweep);
 

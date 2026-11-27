@@ -121,7 +121,7 @@ def world_instance(name, parent, color, glow=0.0, rough=0.7):
 
 def sand_material(mpc):
     mat = fresh("M_DSSand", unreal.Material, unreal.MaterialFactoryNew())
-    clean = vparam(mat, "CleanColor", unreal.LinearColor(0.95, 0.82, 0.55, 1), -900, -100)
+    clean = vparam(mat, "CleanColor", unreal.LinearColor(0.78, 0.6, 0.3, 1), -900, -100)
     dirty = vparam(mat, "DirtyColor", unreal.LinearColor(0.28, 0.27, 0.2, 1), -900, 50)
     lerp = expr(mat, unreal.MaterialExpressionLinearInterpolate, -600, 0)
     MEL.connect_material_expressions(dirty, "", lerp, "A")

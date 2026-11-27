@@ -28,6 +28,7 @@
 #include "Events/DSOctopus.h"
 #include "GameFramework/GameModeBase.h"
 #include "Net/DSSessionSubsystem.h"
+#include "Audio/DSAudioSubsystem.h"
 #include "GameFramework/PlayerState.h"
 #include "Engine/GameInstance.h"
 #include "Pickups/DSPickupManager.h"
@@ -590,7 +591,11 @@ void ADSDiver::GrabPressed()
 	// 1) element de la base a portee (comptoir, levier...), 2) objet vise, 3) lacher.
 	if (ADSInteractable* I = ADSInteractable::FindBest(this)) { Server_Interact(I); return; }
 	ADSPickup* Target = HoverTarget.Get();
-	if (Target && !Grab->IsFull()) Grab->RequestGrab(Target);
+	if (Target && !Grab->IsFull())
+	{
+		Grab->RequestGrab(Target);
+		if (UDSAudioSubsystem* A = GetWorld()->GetSubsystem<UDSAudioSubsystem>()) A->PlaySfx(EDSSfx::Grab, FVector::ZeroVector); // retour immediat
+	}
 	else if (Grab->NumHeld() > 0) Grab->RequestDrop();
 }
 
@@ -603,6 +608,7 @@ void ADSDiver::ActionPressed()
 	{
 		const FVector Aim = Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector();
 		Grab->RequestThrow(Aim);
+		if (UDSAudioSubsystem* A = GetWorld()->GetSubsystem<UDSAudioSubsystem>()) A->PlaySfx(EDSSfx::Throw, FVector::ZeroVector);
 	}
 }
 
@@ -701,6 +707,14 @@ void ADSDiver::Tick(float DeltaSeconds)
 		if (HeldNozzle.IsValid()) F *= 0.72f;
 		if (IsStunned()) F = 0.f;
 		GetCharacterMovement()->MaxFlySpeed = SwimSpeed * F;
+	}
+
+	// Secousse d'ecran (locale) qui s'amortit
+	if (IsLocallyControlled())
+	{
+		Shake = FMath::Max(0.f, Shake - DeltaSeconds * 2.5f);
+		const float T = GetWorld()->GetTimeSeconds();
+		Camera->SetRelativeLocation(Shake > 0.f ? FVector(0.f, FMath::Sin(T * 61.f), FMath::Sin(T * 47.f + 1.f)) * Shake * Shake * 30.f : FVector::ZeroVector);
 	}
 
 	// Cosmetique : inclinaison vers la direction de nage + leger flottement

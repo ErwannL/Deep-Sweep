@@ -110,9 +110,10 @@ void ADSVacuum::StoreItem(UDSPickupData* Type)
 	if (!HasAuthority() || !Type) return;
 	TankItems.Add(Type);
 	TankCount = TankItems.Num();
+	if (ADSGameState* G = GetWorld()->GetGameState<ADSGameState>()) G->Multicast_Sfx(EDSSfx::Slurp, Nozzle ? Nozzle->GetActorLocation() : GetActorLocation());
 	if (IsFull())
 		if (ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>())
-			GS->Multicast_Toast(LOCTEXT("TankFull", "Cuve pleine ! Au levier !"));
+			{ GS->Multicast_Toast(LOCTEXT("TankFull", "Cuve pleine ! Au levier !")); GS->Multicast_Sfx(EDSSfx::Alarm, GetActorLocation()); }
 }
 
 TArray<TObjectPtr<UDSPickupData>> ADSVacuum::TakeTankContents()

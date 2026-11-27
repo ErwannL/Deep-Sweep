@@ -120,3 +120,15 @@ _À venir (étape 11 : menu Héberger/Rejoindre, OnlineSubsystemNull en LAN)._
 
 ![Poulpe](docs/step10_octopus.png)
 - [x] Étape 11 — multijoueur listen server : menu (pseudo, héberger LAN, chercher, rejoindre par IP), sessions Online Subsystem Null, Échap = retour menu ; testé à 2 puis 4 joueurs avec `Net PktLag=100`
+![Base propre](docs/step12_base_clean.png)
+- [x] Étape 12 — juice : sons de synthèse (aucun fichier audio : pop au pitch croissant en combo, aspiration, bouchon, bonk, casse, collègue recyclé, jingles, alarme, poulpe), musique dynamique (couche percussive qui monte quand la chaîne tourne, accords plus lumineux quand c'est propre, final de victoire), secousses d'écran (objet géant livré, collègue aspiré, bouchon, tapis bloqué), popups de crédits, lisibilité (pads, pancarte du comptoir, sable doré)
+
+## État du MVP et suites possibles
+**Ce qui marche** : boucle complète du GDD §15 jouable de 1 à 4 (nage, pince, 150 objets dormants/actifs, aspirateur 2 postes, convoyeur, comptoir, propreté qui recolore la crique, coffre et statue coop, 5 améliorations, Bob, poulpe, écran de fin, menu LAN).
+
+**À faire ensuite** :
+- Vrais assets 3D stylisés (personnages à casque expressif, objets) — à choisir ensemble (Kenney CC0, Fab) ;
+- Bulles en Niagara, vraie surbrillance en contour (post-process) ;
+- Session de playtest réelle à plusieurs PC (le réseau n'a été testé qu'en local, 127.0.0.1) ;
+- Steam (Online Subsystem Steam) pour rejoindre par la liste d'amis ;
+- Équilibrage (temps cible 15–25 min à 2–4 joueurs).

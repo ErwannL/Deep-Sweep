@@ -8,6 +8,7 @@
 #include "Core/DSGameState.h"
 #include "Core/DSPlayerState.h"
 #include "FX/DSPopupText.h"
+#include "Audio/DSAudioSubsystem.h"
 #include "DeepSweep.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -54,6 +55,15 @@ ADSCounter::ADSCounter()
 	Sign->SetTextRenderColor(FColor(255, 240, 120));
 	Sign->SetRelativeLocation(FVector(0, 0, 110.f));
 	Sign->SetRelativeRotation(FRotator(0, 180.f, 0));
+	SignBack = CreateDefaultSubobject<UTextRenderComponent>(TEXT("SignBack"));
+	SignBack->SetupAttachment(RootComponent);
+	SignBack->SetAbsolute(false, false, true);
+	SignBack->SetText(LOCTEXT("CounterSign", "COMPTOIR"));
+	SignBack->SetHorizontalAlignment(EHTA_Center);
+	SignBack->SetWorldSize(70.f);
+	SignBack->SetTextRenderColor(FColor(255, 240, 120));
+	SignBack->SetRelativeLocation(FVector(0, 0, 110.f));
+	SignBack->SetRelativeRotation(FRotator(0, 0.f, 0));
 }
 
 void ADSCounter::BeginPlay()
@@ -123,6 +133,7 @@ void ADSCounter::SellValue(int32 Value, AActor* Seller, const FVector& PopupLoca
 
 void ADSCounter::Multicast_SaleFX_Implementation(int32 Value, FVector_NetQuantize Location)
 {
+	if (UDSAudioSubsystem* A = GetWorld()->GetSubsystem<UDSAudioSubsystem>()) A->PlaySfx(EDSSfx::Sale, Location);
 	ADSPopupText::Spawn(this, Location + FVector(FMath::FRandRange(-60.f, 60.f), FMath::FRandRange(-60.f, 60.f), 0.f),
 		FText::Format(LOCTEXT("SalePopup", "+{0}"), Value), FColor(255, 230, 60));
 }

@@ -1,4 +1,4 @@
-using UnrealBuildTool;
+﻿using UnrealBuildTool;
 public class DeepSweep : ModuleRules
 {
 	public DeepSweep(ReadOnlyTargetRules Target) : base(Target)
@@ -8,7 +8,7 @@ public class DeepSweep : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
 			"Niagara", "PhysicsCore", "NetCore", "UMG", "Slate", "SlateCore",
-			"OnlineSubsystem", "OnlineSubsystemUtils", "CableComponent"
+			"OnlineSubsystem", "OnlineSubsystemUtils", "CableComponent", "AudioMixer", "AudioExtensions"
 		});
 	}
 }

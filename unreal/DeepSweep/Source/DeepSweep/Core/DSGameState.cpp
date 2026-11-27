@@ -1,6 +1,8 @@
 #include "Core/DSGameState.h"
 #include "Net/UnrealNetwork.h"
 #include "DeepSweep.h"
+#include "Player/DSDiver.h"
+#include "Kismet/GameplayStatics.h"
 #include "HAL/IConsoleManager.h"
 #include "Engine/World.h"
 
@@ -49,6 +51,14 @@ void ADSGameState::Multicast_Toast_Implementation(const FText& Message)
 	ToastTime = GetWorld()->GetTimeSeconds();
 }
 
+void ADSGameState::Multicast_Sfx_Implementation(EDSSfx Sfx, FVector_NetQuantize Location, float Shake)
+{
+	if (UDSAudioSubsystem* A = GetWorld()->GetSubsystem<UDSAudioSubsystem>()) A->PlaySfx(Sfx, Location);
+	if (Shake > 0.f)
+		if (ADSDiver* Me = Cast<ADSDiver>(UGameplayStatics::GetPlayerPawn(this, 0)))
+			Me->AddShake(Shake * FMath::Clamp(1.3f - FVector::Dist(Me->GetActorLocation(), Location) / 4000.f, 0.f, 1.f));
+}
+
 void ADSGameState::SetCleanliness(float Value)
 {
 	if (!HasAuthority()) return;
@@ -61,5 +71,6 @@ void ADSGameState::EndMatch()
 	if (!HasAuthority() || bMatchOver) return;
 	bMatchOver = true;
 	FinalTime = GetElapsedTime();
+	Multicast_Sfx(EDSSfx::BigJingle, FVector::ZeroVector, 0.f);
 	UE_LOG(LogDeepSweep, Log, TEXT("Crique nettoyee en %.0f s, %d credits"), FinalTime, Credits);
 }

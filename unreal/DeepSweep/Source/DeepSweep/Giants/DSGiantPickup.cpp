@@ -183,7 +183,10 @@ void ADSGiantPickup::Deliver()
 	if (UDSPickupSubsystem* Sub = GetWorld()->GetSubsystem<UDSPickupSubsystem>())
 		if (ADSPickupManager* M = Sub->GetManager()) M->NotifyCollected(1);
 	if (ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>())
+	{
 		GS->Multicast_Toast(FText::Format(LOCTEXT("Delivered", "{0} livre ! +{1} credits"), DisplayName, Value));
+		GS->Multicast_Sfx(EDSSfx::Jingle, GetActorLocation(), 1.f); // camera qui tremble a l arrivee d un objet geant
+	}
 	UE_LOG(LogDeepSweep, Log, TEXT("Objet geant livre : %s (%d)"), *DisplayName.ToString(), Value);
 	SetLifeSpan(0.2f);
 }

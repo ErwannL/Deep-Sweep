@@ -8,6 +8,7 @@
 #include "Giants/DSCarryComponent.h"
 #include "Pickups/DSPickupSubsystem.h"
 #include "FX/DSPopupText.h"
+#include "Audio/DSAudioSubsystem.h"
 #include "DeepSweep.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
@@ -26,22 +27,22 @@ ADSUpgradePad::ADSUpgradePad()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Sph(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 	Disc = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Disc"));
 	Disc->SetStaticMesh(Cyl.Object);
-	Disc->SetRelativeScale3D(FVector(2.4f, 2.4f, 0.3f));
-	Disc->SetRelativeLocation(FVector(0, 0, 15.f));
+	Disc->SetRelativeScale3D(FVector(2.4f, 2.4f, 0.6f));
+	Disc->SetRelativeLocation(FVector(0, 0, 30.f));
 	RootComponent = Disc;
 	Icon = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Icon"));
 	Icon->SetupAttachment(Disc);
 	Icon->SetAbsolute(false, false, true);
 	Icon->SetStaticMesh(Sph.Object);
 	Icon->SetRelativeScale3D(FVector(0.6f));
-	Icon->SetRelativeLocation(FVector(0, 0, 400.f));
+	Icon->SetRelativeLocation(FVector(0, 0, 250.f));
 	Icon->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Label = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Label"));
 	Label->SetupAttachment(Disc);
 	Label->SetAbsolute(false, false, true);
 	Label->SetHorizontalAlignment(EHTA_Center);
-	Label->SetWorldSize(32.f);
-	Label->SetRelativeLocation(FVector(0, 0, 650.f));
+	Label->SetWorldSize(60.f);
+	Label->SetRelativeLocation(FVector(0, 0, 380.f));
 	Label->SetRelativeRotation(FRotator(0, 0, 0));
 }
 
@@ -66,11 +67,13 @@ void ADSUpgradePad::Interact(ADSDiver* Diver)
 	if (!GS->SpendCredits(Cost))
 	{
 		GS->Multicast_Toast(FText::Format(LOCTEXT("TooPoor", "Pas assez de credits ({0})"), Cost));
+		GS->Multicast_Sfx(EDSSfx::Denied, GetActorLocation());
 		return;
 	}
 	GS->GrantUpgrade(Upgrade);
 	ApplyOwnedUpgrades(GetWorld());
 	GS->Multicast_Toast(FText::Format(LOCTEXT("Bought", "{0} !"), Title));
+	GS->Multicast_Sfx(EDSSfx::Buy, GetActorLocation(), 0.2f);
 	Multicast_Bought();
 	UE_LOG(LogDeepSweep, Log, TEXT("Amelioration achetee : %s"), *Title.ToString());
 }
@@ -108,7 +111,7 @@ void ADSUpgradePad::Tick(float DeltaSeconds)
 	// Icone qui flotte, rebondit a l'achat
 	BounceT = FMath::Max(0.f, BounceT - DeltaSeconds);
 	const float T = GetWorld()->GetTimeSeconds();
-	Icon->SetRelativeLocation(FVector(0, 0, 400.f + FMath::Sin(T * 2.f + Cost) * 40.f + FMath::Sin(BounceT * PI) * 250.f));
+	Icon->SetRelativeLocation(FVector(0, 0, 250.f + FMath::Sin(T * 2.f + Cost) * 25.f + FMath::Sin(BounceT * PI) * 150.f));
 
 	if (State == ShownState) return;
 	ShownState = State;

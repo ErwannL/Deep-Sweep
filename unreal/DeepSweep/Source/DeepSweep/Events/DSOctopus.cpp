@@ -130,7 +130,10 @@ void ADSOctopus::Interact(ADSDiver* Diver)
 	DropLoot(false);
 	for (TActorIterator<ADSCounter> It(GetWorld()); It; ++It) { It->SellValue(CatchReward, Diver, GetActorLocation() + FVector(0, 0, 200.f)); break; }
 	if (ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>())
+	{
 		GS->Multicast_Toast(FText::Format(LOCTEXT("OctoCaught", "Poulpe attrape ! Il lache tout (+{0} credits)"), CatchReward));
+		GS->Multicast_Sfx(EDSSfx::Splash, GetActorLocation(), 0.4f);
+	}
 	UE_LOG(LogDeepSweep, Log, TEXT("Poulpe attrape par %s"), *GetNameSafe(Diver));
 	Reset();
 }
@@ -188,7 +191,7 @@ void ADSOctopus::ServerTick(float DeltaSeconds)
 		SetActorLocation(FVector(FMath::Cos(A), FMath::Sin(A), 0.f) * ArenaRadius + FVector(0, 0, 180.f));
 		State = EDSOctoState::Hunt;
 		ApplyVisibility();
-		if (ADSGameState* G = GetWorld()->GetGameState<ADSGameState>()) G->Multicast_Toast(LOCTEXT("OctoArrive", "Un poulpe voleur ! Attrapez-le !"));
+		if (ADSGameState* G = GetWorld()->GetGameState<ADSGameState>()) { G->Multicast_Toast(LOCTEXT("OctoArrive", "Un poulpe voleur ! Attrapez-le !")); G->Multicast_Sfx(EDSSfx::OctoArrive, FVector::ZeroVector); }
 		UE_LOG(LogDeepSweep, Log, TEXT("Poulpe voleur en approche"));
 		return;
 	}

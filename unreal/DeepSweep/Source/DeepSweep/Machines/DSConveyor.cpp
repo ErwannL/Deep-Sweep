@@ -164,7 +164,7 @@ void ADSConveyor::Interact(ADSDiver* Diver)
 	}
 	bJammed = false;
 	JamId = INDEX_NONE;
-	if (ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>()) GS->Multicast_Toast(LOCTEXT("Unjammed", "Tapis debloque !"));
+	if (ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>()) { GS->Multicast_Toast(LOCTEXT("Unjammed", "Tapis debloque !")); GS->Multicast_Sfx(EDSSfx::Unclog, GetActorLocation()); }
 }
 
 void ADSConveyor::ServerAdvance(float DeltaSeconds)
@@ -184,7 +184,7 @@ void ADSConveyor::ServerAdvance(float DeltaSeconds)
 				bJammed = true;
 				JamId = It.Id;
 				for (FDSBeltItem& Other : Belt.Items) Belt.MarkItemDirty(Other);
-				if (ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>()) GS->Multicast_Toast(LOCTEXT("JamToast", "Convoyeur bloque par un caddie !"));
+				if (ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>()) { GS->Multicast_Toast(LOCTEXT("JamToast", "Convoyeur bloque par un caddie !")); GS->Multicast_Sfx(EDSSfx::Jam, GetJamLocation(), 0.3f); }
 				break;
 			}
 		}

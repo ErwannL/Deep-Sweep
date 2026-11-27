@@ -139,6 +139,7 @@ void ADSVacuumNozzle::PrimaryAction(ADSDiver* Diver)
 	if (Vacuum->Clog > 0)
 	{
 		--Vacuum->Clog;
+		if (ADSGameState* G = GetWorld()->GetGameState<ADSGameState>()) G->Multicast_Sfx(Vacuum->Clog ? EDSSfx::Bonk : EDSSfx::Unclog, GetActorLocation(), 0.15f);
 		Multicast_Popup(GetActorLocation() + FVector(0, 0, 120.f), Vacuum->Clog ? LOCTEXT("Tap", "BONK !") : LOCTEXT("Unclogged", "Debouche !"),
 			Vacuum->Clog ? FColor(255, 160, 60) : FColor(120, 255, 140));
 		return;
@@ -229,7 +230,7 @@ void ADSVacuumNozzle::ServerSuck(float DeltaSeconds)
 			// Caddie coince dans le tuyau : 3 tapes pour deboucher.
 			Vacuum->Clog = 3;
 			Pk->GetMesh()->SetPhysicsLinearVelocity(Fwd * 300.f);
-			if (GS) GS->Multicast_Toast(LOCTEXT("Clogged", "Caddie coince ! Action x3 pour taper dessus"));
+			if (GS) { GS->Multicast_Toast(LOCTEXT("Clogged", "Caddie coince ! Action x3 pour taper dessus")); GS->Multicast_Sfx(EDSSfx::Clog, Mouthpos, 0.35f); }
 			break;
 		}
 		if (T->bFragile && P >= 4)
@@ -238,7 +239,7 @@ void ADSVacuumNozzle::ServerSuck(float DeltaSeconds)
 			Multicast_Popup(Pk->GetActorLocation(), LOCTEXT("Crack", "CRAC !"), FColor(255, 90, 60));
 			if (ADSPlayerState* PS = Holder ? Holder->GetPlayerState<ADSPlayerState>() : nullptr) PS->StatBroken++;
 			if (ADSPickupManager* M = Sub->GetManager()) M->NotifyCollected(1);
-			if (GS) GS->Multicast_Toast(LOCTEXT("VaseBroken", "Vase brise... (puissance trop forte)"));
+			if (GS) { GS->Multicast_Toast(LOCTEXT("VaseBroken", "Vase brise... (puissance trop forte)")); GS->Multicast_Sfx(EDSSfx::Break, Pk->GetActorLocation(), 0.25f); }
 			Pk->Destroy();
 			continue;
 		}
@@ -270,7 +271,10 @@ void ADSVacuumNozzle::SuckDivers(float DeltaSeconds, float R)
 			if (ADSPlayerState* PS = Holder->GetPlayerState<ADSPlayerState>()) PS->StatSucked++;
 			const APlayerState* Victim = D->GetPlayerState();
 			if (ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>())
+			{
 				GS->Multicast_Toast(FText::Format(LOCTEXT("Recycled", "{0} a ete recycle(e) !"), FText::FromString(Victim ? Victim->GetPlayerName() : TEXT("Un collegue"))));
+				GS->Multicast_Sfx(EDSSfx::Recycled, D->GetActorLocation(), 0.6f);
+			}
 		}
 	}
 }

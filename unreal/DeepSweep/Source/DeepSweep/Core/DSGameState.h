@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
 #include "Upgrades/DSUpgradePad.h"
+#include "Audio/DSAudioSubsystem.h"
 #include "DSGameState.generated.h"
 
 /** Etat partage de la partie : porte-monnaie commun (GDD 11), proprete, chrono. */
@@ -35,6 +36,8 @@ public:
 
 	/** Message court affiche a tous (radio de M. Abysso, alertes). */
 	UFUNCTION(NetMulticast, Reliable) void Multicast_Toast(const FText& Message);
+	/** Son + secousse d'ecran (pres de Location) chez tous les joueurs. Serveur. */
+	UFUNCTION(NetMulticast, Unreliable) void Multicast_Sfx(EDSSfx Sfx, FVector_NetQuantize Location, float Shake = 0.f);
 	FText GetToast(float& OutAge) const { OutAge = GetWorld() ? GetWorld()->GetTimeSeconds() - ToastTime : 99.f; return Toast; }
 
 	virtual void BeginPlay() override;
