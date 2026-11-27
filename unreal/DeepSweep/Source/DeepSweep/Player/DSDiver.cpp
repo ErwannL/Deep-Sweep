@@ -244,8 +244,9 @@ void ADSDiver::Tick(float DeltaSeconds)
 	if (IsLocallyControlled() && Controller && CVarAutoPilot.GetValueOnGameThread() > 0)
 	{
 		const float T = GetWorld()->GetTimeSeconds();
-		AddMovementInput(FVector(FMath::Cos(T * 0.6f), FMath::Sin(T * 0.6f), 0.35f * FMath::Sin(T * 0.9f)), 1.f);
-		Controller->SetControlRotation(FRotator(-15.f, FMath::RadiansToDegrees(T * 0.6f) + 60.f, 0.f));
+		// Nage vers le centre de la crique en serpentant
+		AddMovementInput(FVector(1.f, 0.6f * FMath::Sin(T * 0.7f), 0.25f * FMath::Sin(T * 0.5f)), 1.f);
+		Controller->SetControlRotation(FRotator(-12.f, 20.f * FMath::Sin(T * 0.7f), 0.f));
 	}
 
 	if (IsLocallyControlled() && CVarShotAt.GetValueOnGameThread() > 0.f)
