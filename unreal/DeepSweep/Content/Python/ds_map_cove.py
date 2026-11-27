@@ -254,6 +254,23 @@ statue.set_editor_property("shape", unreal.DSGiantShape.STATUE)
 statue.set_editor_property("value", 600)
 statue.set_editor_property("color", unreal.LinearColor(0.85, 0.83, 0.77, 1))
 
+# ---------------------------------------------------------------- Boutique : 5 ameliorations
+UPGRADES = [
+    (unreal.DSUpgrade.BAG, "Sac plus grand", "porter 3 objets", 30),
+    (unreal.DSUpgrade.CLAW, "Pince telescopique", "portee x1,6", 45),
+    (unreal.DSUpgrade.TURBO, "Turbo aspirateur", "puissance max 5", 80),
+    (unreal.DSUpgrade.FAST_BELT, "Tapis rapide", "convoyeur x2", 60),
+    (unreal.DSUpgrade.BALLOONS, "Ballons", "objets geants plus legers", 100),
+]
+for i, (up, title, desc, cost) in enumerate(UPGRADES):
+    pad = eas.spawn_actor_from_class(unreal.DSUpgradePad, V(BASE_X - 500, -800 + i * 400, 0), R(0, 0, 0))
+    pad.set_actor_label(f"UpgradePad_{i}")
+    pad.set_folder_path("Base/Shop")
+    pad.set_editor_property("upgrade", up)
+    pad.set_editor_property("title", title)
+    pad.set_editor_property("description", desc)
+    pad.set_editor_property("cost", cost)
+
 # ---------------------------------------------------------------- Ambiance sale -> coloree (proprete)
 amb = eas.spawn_actor_from_class(unreal.DSAmbienceController, V(0, 0, 0))
 amb.set_actor_label("AmbienceController")

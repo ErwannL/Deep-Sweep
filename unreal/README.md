@@ -45,6 +45,7 @@ Ouvrir `unreal/DeepSweep/DeepSweep.uproject` (carte de démarrage : `/Game/Maps/
 
 ## Commandes de debug (console `~`)
 - `ds.Debug 1` : compteurs objets total / dormants / actifs / collectés.
+- `ds.TestShop 1` : scénario automatique achat des 5 améliorations + vérification des effets.
 - `ds.TestGiant 1` : scénario automatique porter le coffre jusqu'au comptoir.
 - `ds.TestBelt 1` : scénario automatique cuve → tapis → blocage → déblocage → vente.
 - `ds.TestVac 1` : scénario automatique prendre la buse → aspirer un tas.
@@ -84,3 +85,6 @@ _À venir (étape 11 : menu Héberger/Rejoindre, OnlineSubsystemNull en LAN)._
 - [x] Étape 8 — objets géants coop : coffre (2 porteurs, 300 ₡) et statue (3, 600 ₡) ; porteurs requis plafonnés au nombre de joueurs ; vitesse selon le nombre de porteurs ; direction = moyenne des intentions (rotation si désaccord) ; livraison au comptoir
 
 ![Coffre](docs/step8_giant.png)
+- [x] Étape 9 — 5 améliorations achetées sur des pads à la base (crédits partagés, une fois pour l'équipe, appliquées aussi aux joueurs qui arrivent) : sac (3 objets, 30 ₡), pince télescopique (×1,6, 45 ₡), turbo aspirateur (P5, 80 ₡), tapis rapide (×2, 60 ₡), ballons (géants ×1,6, 100 ₡)
+
+![Boutique](docs/step9_shop.png)

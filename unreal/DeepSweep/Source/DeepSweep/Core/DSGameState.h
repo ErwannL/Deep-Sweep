@@ -1,6 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "Upgrades/DSUpgradePad.h"
 #include "DSGameState.generated.h"
 
 /** Etat partage de la partie : porte-monnaie commun (GDD 11), proprete, chrono. */
@@ -22,6 +23,10 @@ public:
 	bool SpendCredits(int32 Amount);
 	void SetCleanliness(float Value);
 
+	/** Ameliorations achetees (communes a l'equipe). */
+	bool HasUpgrade(EDSUpgrade U) const { return (OwnedUpgrades & (1u << uint8(U))) != 0; }
+	void GrantUpgrade(EDSUpgrade U) { if (HasAuthority()) OwnedUpgrades |= (1u << uint8(U)); }
+
 	/** Message court affiche a tous (radio de M. Abysso, alertes). */
 	UFUNCTION(NetMulticast, Reliable) void Multicast_Toast(const FText& Message);
 	FText GetToast(float& OutAge) const { OutAge = GetWorld() ? GetWorld()->GetTimeSeconds() - ToastTime : 99.f; return Toast; }
@@ -33,6 +38,7 @@ protected:
 	UPROPERTY(Replicated) int32 Credits = 0;
 	UPROPERTY(Replicated) float Cleanliness = 0.f;
 	UPROPERTY(Replicated) float MatchStartTime = 0.f;
+	UPROPERTY(Replicated) uint8 OwnedUpgrades = 0;
 	FText Toast;
 	float ToastTime = -99.f;
 };

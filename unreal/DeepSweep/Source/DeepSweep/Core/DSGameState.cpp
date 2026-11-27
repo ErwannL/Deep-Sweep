@@ -9,6 +9,7 @@ void ADSGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(ADSGameState, Credits);
 	DOREPLIFETIME(ADSGameState, Cleanliness);
 	DOREPLIFETIME(ADSGameState, MatchStartTime);
+	DOREPLIFETIME(ADSGameState, OwnedUpgrades);
 }
 
 void ADSGameState::BeginPlay()

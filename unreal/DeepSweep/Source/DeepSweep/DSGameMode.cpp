@@ -4,6 +4,7 @@
 #include "Core/DSGameState.h"
 #include "Core/DSPlayerState.h"
 #include "UI/DSHUD.h"
+#include "Upgrades/DSUpgradePad.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 
@@ -30,5 +31,6 @@ void ADSGameMode::RestartPlayer(AController* NewPlayer)
 		// Couleur = rang d'arrivee dans la partie
 		const int32 Index = GameState ? GameState->PlayerArray.IndexOfByKey(NewPlayer->PlayerState) : 0;
 		Diver->SetColorIndex(static_cast<uint8>(FMath::Max(0, Index) % 4));
+		ADSUpgradePad::ApplyOwnedUpgrades(GetWorld()); // un joueur qui arrive profite des achats
 	}
 }

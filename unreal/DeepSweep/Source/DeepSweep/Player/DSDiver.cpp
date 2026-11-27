@@ -24,6 +24,7 @@
 #include "Machines/DSConveyor.h"
 #include "Giants/DSGiantPickup.h"
 #include "Giants/DSCarryComponent.h"
+#include "Upgrades/DSUpgradePad.h"
 #include "Pickups/DSPickupManager.h"
 #include "Pickups/DSPickupData.h"
 #include "Core/DSGameState.h"
@@ -43,6 +44,8 @@ static TAutoConsoleVariable<int32> CVarTestBelt(TEXT("ds.TestBelt"), 0,
 	TEXT("Debug : scenario auto cuve -> tapis (avec caddie qui bloque) -> deblocage -> vente."));
 static TAutoConsoleVariable<int32> CVarTestGiant(TEXT("ds.TestGiant"), 0,
 	TEXT("Debug : scenario auto porter le coffre jusqu au comptoir."));
+static TAutoConsoleVariable<int32> CVarTestShop(TEXT("ds.TestShop"), 0,
+	TEXT("Debug : scenario auto credits -> achat des 5 ameliorations -> verification des effets."));
 static TAutoConsoleVariable<float> CVarShotAt(TEXT("ds.ShotAt"), 0.f,
 	TEXT("Debug : capture d'ecran a T secondes puis quitte (0 = desactive)."));
 
@@ -318,6 +321,58 @@ void ADSDiver::Server_SetCarryIntent_Implementation(FVector_NetQuantize100 Inten
 	CarryIntent = FVector(Intent).GetClampedToMaxSize(1.f);
 }
 
+void ADSDiver::RunShopScenario()
+{
+	static int32 Step = 0;
+	static int32 PadIndex = 0;
+	const float T = GetWorld()->GetTimeSeconds();
+	APlayerController* PC = Cast<APlayerController>(Controller);
+	ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>();
+	if (!PC || !GS) return;
+	TArray<ADSUpgradePad*> Pads;
+	for (TActorIterator<ADSUpgradePad> It(GetWorld()); It; ++It) Pads.Add(*It);
+	Pads.Sort([](const ADSUpgradePad& A, const ADSUpgradePad& B) { return A.Cost < B.Cost; });
+	if (Pads.Num() == 0) return;
+	if (Step == 0 && T > 2.f)
+	{
+		// Vue d'ensemble des pads, avec juste assez pour 3 achats
+		GS->AddCredits(140);
+		SetActorLocation(Pads[2]->GetActorLocation() + FVector(900.f, 0.f, 350.f));
+		PC->SetControlRotation(FRotator(-22.f, 180.f, 0.f));
+		Step = 1;
+	}
+	else if (Step == 1 && T > 3.5f) { PC->ConsoleCommand(TEXT("shot showui")); Step = 2; }
+	else if (Step == 2 && T > 4.f)
+	{
+		GS->AddCredits(1000);
+		Step = 3;
+	}
+	else if (Step == 3 && T > 4.2f + PadIndex * 0.6f)
+	{
+		if (PadIndex < Pads.Num())
+		{
+			SetActorLocation(Pads[PadIndex]->GetActorLocation() + FVector(0, 0, 120.f));
+			Step = 4;
+		}
+		else Step = 5;
+	}
+	else if (Step == 4 && T > 4.5f + PadIndex * 0.6f) { GrabPressed(); ++PadIndex; Step = 3; }
+	else if (Step == 5)
+	{
+		int32 MaxP = -1; float BeltSpeed = -1.f; bool bBalloons = false;
+		for (TActorIterator<ADSVacuum> It(GetWorld()); It; ++It) MaxP = It->MaxPower;
+		for (TActorIterator<ADSConveyor> It(GetWorld()); It; ++It) BeltSpeed = It->Speed;
+		for (TActorIterator<ADSGiantPickup> It(GetWorld()); It; ++It) bBalloons = It->GetCarry()->bBalloons;
+		UE_LOG(LogDeepSweep, Log, TEXT("TEST achats : credits=%d capacite=%d portee=%.0f puissanceMax=%d tapis=%.0f ballons=%d"),
+			GS->GetCredits(), Grab->Capacity, Grab->Range, MaxP, BeltSpeed, bBalloons ? 1 : 0);
+		SetActorLocation(Pads[2]->GetActorLocation() + FVector(900.f, 0.f, 350.f));
+		PC->SetControlRotation(FRotator(-22.f, 180.f, 0.f));
+		Step = 6;
+	}
+	else if (Step == 6 && T > 9.f) { PC->ConsoleCommand(TEXT("shot showui")); Step = 7; }
+	else if (Step == 7 && T > 10.f) { PC->ConsoleCommand(TEXT("quit")); Step = 8; }
+}
+
 void ADSDiver::RunGiantScenario()
 {
 	static int32 Step = 0;
@@ -537,6 +592,7 @@ void ADSDiver::Tick(float DeltaSeconds)
 	if (IsLocallyControlled() && CVarTestVac.GetValueOnGameThread() > 0) RunVacScenario();
 	if (IsLocallyControlled() && CVarTestBelt.GetValueOnGameThread() > 0) RunBeltScenario();
 	if (IsLocallyControlled() && CVarTestGiant.GetValueOnGameThread() > 0) RunGiantScenario();
+	if (IsLocallyControlled() && CVarTestShop.GetValueOnGameThread() > 0) RunShopScenario();
 
 	// Intention de portage : envoyee au serveur ~10 fois/s (ou des qu'elle change).
 	if (IsLocallyControlled())

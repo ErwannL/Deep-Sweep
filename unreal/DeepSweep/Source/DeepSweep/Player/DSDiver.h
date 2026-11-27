@@ -104,6 +104,7 @@ private:
 	void RunVacScenario();
 	void RunBeltScenario();
 	void RunGiantScenario();
+	void RunShopScenario();
 	FVector CarryIntent = FVector::ZeroVector;
 	FVector PendingIntent = FVector::ZeroVector;
 	bool bIntentThisFrame = false;
