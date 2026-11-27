@@ -127,6 +127,18 @@ void ADSHUD::DrawHUD()
 	if (!Toast.IsEmpty() && Age < 2.8f)
 		Label(Toast.ToString(), Canvas->ClipX * 0.5f, Canvas->ClipY * 0.2f, FLinearColor(1.f, 1.f, 1.f, FMath::Clamp((2.8f - Age) * 2.f, 0.f, 1.f)), 1.9f * S, true);
 
+	// Rappel permanent des touches + aide plus grande les 15 premieres secondes
+	Label(TEXT("Echap : menu    F : attraper / utiliser    G : lancer / action    Espace / Ctrl : monter / descendre"), 20 * S, Canvas->ClipY - 40 * S, FLinearColor(1, 1, 1, 0.55f), 0.95f * S);
+	if (GS->GetElapsedTime() < 15.f)
+	{
+		const float CX = Canvas->ClipX - 480 * S, CY = 90 * S;
+		DrawRect(FLinearColor(0.f, 0.05f, 0.1f, 0.7f), CX, CY, 450 * S, 250 * S);
+		Label(TEXT("Nettoyez la crique a 100 % !"), CX + 20 * S, CY + 14 * S, FLinearColor(0.4f, 0.95f, 1.f), 1.3f * S);
+		const TCHAR* Lines[] = { TEXT("ZQSD/WASD : nager   souris : regarder"), TEXT("F : attraper un dechet, utiliser une machine"),
+			TEXT("G : lancer (ou action de l'aspirateur)"), TEXT("Vendez au COMPTOIR vert, achetez sur les pads violets"), TEXT("Echap : menu (options, quitter)") };
+		for (int32 i = 0; i < 5; ++i) Label(Lines[i], CX + 20 * S, CY + (62 + i * 36) * S, FLinearColor::White, 1.f * S);
+	}
+
 	// Aide contextuelle
 	if (const ADSDiver* Diver = Cast<ADSDiver>(GetOwningPawn()))
 	{

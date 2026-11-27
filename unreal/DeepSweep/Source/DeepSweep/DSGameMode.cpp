@@ -5,6 +5,7 @@
 #include "Core/DSPlayerState.h"
 #include "UI/DSHUD.h"
 #include "Upgrades/DSUpgradePad.h"
+#include "Player/DSPlayerController.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
@@ -15,6 +16,7 @@ ADSGameMode::ADSGameMode()
 	GameStateClass = ADSGameState::StaticClass();
 	PlayerStateClass = ADSPlayerState::StaticClass();
 	HUDClass = ADSHUD::StaticClass();
+	PlayerControllerClass = ADSPlayerController::StaticClass();
 	bUseSeamlessTravel = true;
 }
 

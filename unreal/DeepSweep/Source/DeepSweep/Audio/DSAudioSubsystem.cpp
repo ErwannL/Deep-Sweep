@@ -9,6 +9,7 @@
 #include "Giants/DSGiantPickup.h"
 #include "Giants/DSCarryComponent.h"
 #include "Events/DSOctopus.h"
+#include "Core/DSUserSettings.h"
 
 static constexpr int32 GRate = 22050;
 
@@ -124,6 +125,7 @@ void UDSAudioSubsystem::PlaySfx(EDSSfx Sfx, const FVector& Location)
 	case EDSSfx::Alarm: S = { { 880.f, 0.12f, T::Square, 0.07f, 0, 0.f }, { 660.f, 0.12f, T::Square, 0.07f, 0, 0.15f } }; break;
 	case EDSSfx::Denied: S = { { 200.f, 0.15f, T::Square, 0.07f, -60.f } }; break;
 	}
+	if (const UDSUserSettings* Set = UDSUserSettings::Get(this)) Gain *= Set->SfxVolume;
 	PlayTones(S, Gain);
 }
 
@@ -151,6 +153,7 @@ void UDSAudioSubsystem::Tick(float DeltaTime)
 	if (Live.Num() == 0) KeepAlive.Reset();
 
 	if (!Music) return;
+	if (MusicComp) if (const UDSUserSettings* Set = UDSUserSettings::Get(this)) MusicComp->SetVolumeMultiplier(0.55f * Set->MusicVolume + 0.001f);
 	// Intensite : la chaine tourne-t-elle ? (aspiration, tapis, objets geants, poulpe)
 	float I = 0.2f;
 	for (TActorIterator<ADSVacuumNozzle> It(W); It; ++It) if (It->IsSucking()) I += 0.3f;

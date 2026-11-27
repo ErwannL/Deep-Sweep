@@ -29,6 +29,9 @@
 #include "GameFramework/GameModeBase.h"
 #include "Net/DSSessionSubsystem.h"
 #include "Audio/DSAudioSubsystem.h"
+#include "Player/DSPlayerController.h"
+#include "Core/DSUserSettings.h"
+#include "Framework/Application/SlateApplication.h"
 #include "GameFramework/PlayerState.h"
 #include "Engine/GameInstance.h"
 #include "Pickups/DSPickupManager.h"
@@ -58,6 +61,8 @@ static TAutoConsoleVariable<int32> CVarTestNet(TEXT("ds.TestNet"), 0,
 	TEXT("Debug hote : attend N joueurs puis coffre a plusieurs + aspiration d un collegue + debit."));
 static TAutoConsoleVariable<int32> CVarTestNetClient(TEXT("ds.TestNetClient"), 0,
 	TEXT("Debug client : journalise la replication et pousse le coffre."));
+static TAutoConsoleVariable<int32> CVarTestKeys(TEXT("ds.TestKeys"), 0,
+	TEXT("Test : simule de vraies touches (Z/W, Echap) via Slate apres l arrivee en jeu."));
 static TAutoConsoleVariable<float> CVarShotAt(TEXT("ds.ShotAt"), 0.f,
 	TEXT("Debug : capture d'ecran a T secondes puis quitte (0 = desactive)."));
 
@@ -232,6 +237,7 @@ void ADSDiver::BuildInput()
 	M->MapKey(IA_Action, EKeys::Gamepad_FaceButton_Right);
 	M->MapKey(IA_Menu, EKeys::Escape);
 	M->MapKey(IA_Menu, EKeys::Gamepad_Special_Left);
+	M->MapKey(IA_Menu, EKeys::Gamepad_Special_Right);
 }
 
 void ADSDiver::PawnClientRestart()
@@ -239,7 +245,7 @@ void ADSDiver::PawnClientRestart()
 	Super::PawnClientRestart();
 	// Pseudo choisi dans le menu (ou -DSName=) : envoye au serveur une fois connecte.
 	if (const UDSSessionSubsystem* SS = GetGameInstance() ? GetGameInstance()->GetSubsystem<UDSSessionSubsystem>() : nullptr)
-		if (const APlayerState* PS = GetPlayerState(); !PS || PS->GetPlayerName() != SS->PlayerName) Server_SetDisplayName(SS->PlayerName);
+		if (const APlayerState* PS = GetPlayerState(); !PS || PS->GetPlayerName() != SS->GetPlayerName()) Server_SetDisplayName(SS->GetPlayerName());
 	BuildInput();
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 		if (ULocalPlayer* LP = PC->GetLocalPlayer())
@@ -288,8 +294,10 @@ void ADSDiver::Move(const FInputActionValue& Value)
 void ADSDiver::Look(const FInputActionValue& Value)
 {
 	const FVector2D V = Value.Get<FVector2D>();
-	AddControllerYawInput(V.X);
-	AddControllerPitchInput(-V.Y);
+	const UDSUserSettings* Set = UDSUserSettings::Get(this);
+	const float Sens = Set ? Set->MouseSensitivity : 1.f;
+	AddControllerYawInput(V.X * Sens);
+	AddControllerPitchInput(-V.Y * Sens * (Set && Set->bInvertY ? -1.f : 1.f));
 }
 
 void ADSDiver::Vertical(const FInputActionValue& Value)
@@ -348,10 +356,53 @@ void ADSDiver::Server_SetDisplayName_Implementation(const FString& NewName)
 		if (APlayerController* PC = Cast<APlayerController>(Controller)) GM->ChangeName(PC, N, false);
 }
 
+void ADSDiver::RunKeysTest()
+{
+	// Passe par la vraie chaine d'entree (Slate -> viewport -> Enhanced Input), comme un joueur.
+	static int32 Step = 0;
+	static float T0 = 0.f;
+	static FVector Start;
+	const float T = GetWorld()->GetTimeSeconds();
+	ADSPlayerController* PC = Cast<ADSPlayerController>(Controller);
+	if (!PC || !FSlateApplication::IsInitialized()) return;
+	FSlateApplication& App = FSlateApplication::Get();
+	auto Key = [&App](const FKey& K, bool bDown)
+	{
+		const FKeyEvent E(K, FModifierKeysState(), 0, false, 0, 0);
+		if (bDown) App.ProcessKeyDownEvent(E); else App.ProcessKeyUpEvent(E);
+	};
+	if (Step == 0) { T0 = T; Step = 1; }
+	else if (Step == 1 && T > T0 + 2.f) { Start = GetActorLocation(); Key(EKeys::W, true); Step = 2; }
+	else if (Step == 2 && T > T0 + 4.f)
+	{
+		Key(EKeys::W, false);
+		UE_LOG(LogDeepSweep, Log, TEXT("TEST touches : deplacement %.0f cm avec Z/W pendant 2 s"), FVector::Dist(Start, GetActorLocation()));
+		Step = 3;
+	}
+	else if (Step == 3 && T > T0 + 4.5f) { Key(EKeys::Escape, true); Step = 31; }
+	else if (Step == 31 && T > T0 + 4.7f) { Key(EKeys::Escape, false); Step = 4; }
+	else if (Step == 4 && T > T0 + 5.5f) { UE_LOG(LogDeepSweep, Log, TEXT("TEST touches : menu pause ouvert=%d"), PC->IsPauseMenuOpen() ? 1 : 0); PC->ConsoleCommand(TEXT("shot showui")); Step = 5; }
+	else if (Step == 5 && T > T0 + 6.5f) { Key(EKeys::Escape, true); Step = 51; }
+	else if (Step == 51 && T > T0 + 6.7f) { Key(EKeys::Escape, false); Step = 6; }
+	else if (Step == 6 && T > T0 + 7.f)
+	{
+		UE_LOG(LogDeepSweep, Log, TEXT("TEST touches : menu pause ferme=%d"), PC->IsPauseMenuOpen() ? 0 : 1);
+		Start = GetActorLocation(); Key(EKeys::W, true); Step = 7;
+	}
+	else if (Step == 7 && T > T0 + 8.5f)
+	{
+		Key(EKeys::W, false);
+		UE_LOG(LogDeepSweep, Log, TEXT("TEST touches : apres pause, deplacement %.0f cm"), FVector::Dist(Start, GetActorLocation()));
+		PC->ConsoleCommand(TEXT("shot showui"));
+		Step = 8;
+	}
+	else if (Step == 8 && T > T0 + 9.5f) { PC->ConsoleCommand(TEXT("quit")); Step = 9; }
+}
+
 void ADSDiver::MenuPressed()
 {
-	// Echap / Select : quitter la partie et revenir au menu
-	if (UDSSessionSubsystem* S = GetGameInstance() ? GetGameInstance()->GetSubsystem<UDSSessionSubsystem>() : nullptr) S->LeaveToMenu();
+	// Echap / Start : menu pause (reprendre, options, quitter la partie, quitter le jeu)
+	if (ADSPlayerController* PC = Cast<ADSPlayerController>(Controller)) PC->TogglePauseMenu();
 }
 
 void ADSDiver::Server_RequestRestart_Implementation()
@@ -683,6 +734,7 @@ void ADSDiver::Tick(float DeltaSeconds)
 	if (IsLocallyControlled() && CVarTestGiant.GetValueOnGameThread() > 0) RunGiantScenario();
 	if (IsLocallyControlled() && CVarTestShop.GetValueOnGameThread() > 0) RunShopScenario();
 	if (IsLocallyControlled() && CVarTestOcto.GetValueOnGameThread() > 0) RunOctoScenario();
+	if (IsLocallyControlled() && CVarTestKeys.GetValueOnGameThread() > 0) RunKeysTest();
 	if (IsLocallyControlled() && HasAuthority() && CVarTestNet.GetValueOnGameThread() > 0) RunNetHostScenario(CVarTestNet.GetValueOnGameThread());
 	if (IsLocallyControlled() && !HasAuthority() && CVarTestNetClient.GetValueOnGameThread() > 0) RunNetClientScenario();
 

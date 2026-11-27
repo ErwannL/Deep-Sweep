@@ -114,6 +114,7 @@ private:
 	void RunNetHostScenario(int32 Expected);
 	void RunNetClientScenario();
 	void MenuPressed();
+	void RunKeysTest();
 	FVector CarryIntent = FVector::ZeroVector;
 	FVector PendingIntent = FVector::ZeroVector;
 	bool bIntentThisFrame = false;
