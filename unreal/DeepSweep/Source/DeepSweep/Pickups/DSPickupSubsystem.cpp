@@ -22,7 +22,7 @@ ADSPickup* UDSPickupSubsystem::FindBestPickup(const FVector& From, const FVector
 	for (const TWeakObjectPtr<ADSPickup>& W : Actives)
 	{
 		ADSPickup* P = W.Get();
-		if (!P || !P->GetType()) continue;
+		if (!P || !P->GetType() || P->IsHeld()) continue;
 		const FVector To = P->GetActorLocation() - From;
 		const float Dist = FMath::Max(0.f, To.Size() - P->GetType()->Radius);
 		if (Dist > Range) continue;

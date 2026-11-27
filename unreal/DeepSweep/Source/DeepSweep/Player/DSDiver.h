@@ -9,6 +9,7 @@ class UStaticMeshComponent;
 class UInputAction;
 class UInputMappingContext;
 class ADSPickup;
+class UDSGrabComponent;
 struct FInputActionValue;
 
 /** Plongeur : nage arcade 6 axes (mode Flying du CharacterMovement, predit et replique nativement). */
@@ -34,8 +35,9 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Swim") float SwimSpeed = 900.f;
 	UPROPERTY(EditAnywhere, Category = "Swim") float VerticalSpeedScale = 0.8f;
-	/** Portee de la pince (cm, depuis le bord de l'objet). */
-	UPROPERTY(EditAnywhere, Category = "Grab") float GrabRange = 220.f;
+	UDSGrabComponent* GetGrab() const { return Grab; }
+	/** Ralentissement quand on porte (applique cote serveur et client pour la prediction). */
+	void SetCarrySpeedFactor(float Factor);
 
 	/** Objet vise (local) : contour lumineux, cible de la pince. */
 	ADSPickup* GetHoverTarget() const { return HoverTarget.Get(); }
@@ -51,6 +53,8 @@ protected:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> EyeL;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> EyeR;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> TankMesh;
+	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> ClawMesh;
+	UPROPERTY(VisibleAnywhere) TObjectPtr<UDSGrabComponent> Grab;
 
 	// Enhanced Input cree a l'execution : pas d'asset binaire a maintenir.
 	UPROPERTY(Transient) TObjectPtr<UInputMappingContext> MappingContext;
@@ -73,6 +77,8 @@ protected:
 private:
 	TWeakObjectPtr<ADSPickup> HoverTarget;
 	void UpdateHover();
+	void RunDebugScenario();
+	float CarrySpeedFactor = 1.f;
 	float BobTime = 0.f;
 	FRotator VisualTilt = FRotator::ZeroRotator;
 };

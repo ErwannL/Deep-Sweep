@@ -47,9 +47,36 @@ void ADSPickup::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME_CONDITION(ADSPickup, Type, COND_InitialOnly);
 	DOREPLIFETIME_CONDITION(ADSPickup, PickupId, COND_InitialOnly);
+	DOREPLIFETIME(ADSPickup, Holder);
 }
 
 void ADSPickup::OnRep_Type() { ApplyType(); }
+
+void ADSPickup::SetHolder(AActor* NewHolder)
+{
+	Holder = NewHolder;
+	ApplyHeldState();
+}
+
+void ADSPickup::OnRep_Holder() { ApplyHeldState(); }
+
+void ADSPickup::ApplyHeldState()
+{
+	if (Holder)
+	{
+		// Porte : plus de physique ni de collision, suit le porteur (attachement replique).
+		Mesh->SetSimulatePhysics(false);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		SetHighlighted(false);
+		StillTime = 0.f;
+	}
+	else
+	{
+		Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		Mesh->SetSimulatePhysics(true);
+		Mesh->WakeAllRigidBodies();
+	}
+}
 
 void ADSPickup::ApplyType()
 {
@@ -94,7 +121,7 @@ void ADSPickup::Tick(float DeltaSeconds)
 	if (!HasAuthority()) return;
 
 	// Retour au repos : immobile 3 s -> dormant (si personne n'est proche).
-	if (!bKeepAwake && Mesh->GetPhysicsLinearVelocity().SizeSquared() < FMath::Square(12.f))
+	if (!bKeepAwake && !Holder && Mesh->GetPhysicsLinearVelocity().SizeSquared() < FMath::Square(12.f))
 	{
 		StillTime += DeltaSeconds;
 		if (StillTime > 3.f)

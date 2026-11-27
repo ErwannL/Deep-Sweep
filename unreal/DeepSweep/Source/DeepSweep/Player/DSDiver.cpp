@@ -15,10 +15,13 @@
 #include "HAL/IConsoleManager.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Pickups/DSPickup.h"
+#include "Player/DSGrabComponent.h"
 #include "Pickups/DSPickupSubsystem.h"
 
 static TAutoConsoleVariable<int32> CVarAutoPilot(TEXT("ds.AutoPilot"), 0,
 	TEXT("Debug : 1 = le plongeur local nage seul en spirale (captures automatiques)."));
+static TAutoConsoleVariable<int32> CVarTestGrab(TEXT("ds.TestGrab"), 0,
+	TEXT("Debug : scenario auto (attrape la cible a 3 s, capture, lance a 5 s, capture, quitte)."));
 static TAutoConsoleVariable<float> CVarShotAt(TEXT("ds.ShotAt"), 0.f,
 	TEXT("Debug : capture d'ecran a T secondes puis quitte (0 = desactive)."));
 
@@ -90,6 +93,10 @@ ADSDiver::ADSDiver(const FObjectInitializer& OI) : Super(OI)
 	VisorMesh  = MakePart(TEXT("Visor"),  Sphere.Object,   FVector(40, 0, 50),   FVector(0.28f, 0.62f, 0.55f));
 	EyeL       = MakePart(TEXT("EyeL"),   Sphere.Object,   FVector(52, -13, 55), FVector(0.12f, 0.12f, 0.16f));
 	EyeR       = MakePart(TEXT("EyeR"),   Sphere.Object,   FVector(52, 13, 55),  FVector(0.12f, 0.12f, 0.16f));
+	ClawMesh   = MakePart(TEXT("Claw"),   Cylinder.Object, FVector(45, 38, -15), FVector(0.12f, 0.12f, 0.55f));
+	ClawMesh->SetRelativeRotation(FRotator(-70.f, 0.f, 0.f));
+
+	Grab = CreateDefaultSubobject<UDSGrabComponent>(TEXT("Grab"));
 }
 
 void ADSDiver::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -120,6 +127,7 @@ void ADSDiver::ApplyColor()
 	Tint(VisorMesh, FLinearColor(0.02f, 0.08f, 0.12f));
 	Tint(EyeL, FLinearColor::White);
 	Tint(EyeR, FLinearColor::White);
+	Tint(ClawMesh, FLinearColor(0.95f, 0.75f, 0.1f));
 }
 
 void ADSDiver::BeginPlay()
@@ -236,8 +244,42 @@ void ADSDiver::Vertical(const FInputActionValue& Value)
 	AddMovementInput(FVector::UpVector, Value.Get<float>() * VerticalSpeedScale);
 }
 
-void ADSDiver::GrabPressed() { UE_LOG(LogDeepSweep, Verbose, TEXT("Grab (etape 4)")); }
-void ADSDiver::ActionPressed() { UE_LOG(LogDeepSweep, Verbose, TEXT("Action (etape 6)")); }
+void ADSDiver::SetCarrySpeedFactor(float Factor)
+{
+	CarrySpeedFactor = Factor;
+	GetCharacterMovement()->MaxFlySpeed = SwimSpeed * CarrySpeedFactor;
+}
+
+void ADSDiver::GrabPressed()
+{
+	// Attraper l'objet vise ; sinon (ou sac plein) lacher ce qu'on porte.
+	ADSPickup* Target = HoverTarget.Get();
+	if (Target && !Grab->IsFull()) Grab->RequestGrab(Target);
+	else if (Grab->NumHeld() > 0) Grab->RequestDrop();
+}
+
+void ADSDiver::ActionPressed()
+{
+	// Lancer dans la direction de la camera.
+	if (Grab->NumHeld() > 0)
+	{
+		const FVector Aim = Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector();
+		Grab->RequestThrow(Aim);
+	}
+}
+
+void ADSDiver::RunDebugScenario()
+{
+	static int32 Step = 0;
+	const float T = GetWorld()->GetTimeSeconds();
+	APlayerController* PC = Cast<APlayerController>(Controller);
+	if (!PC) return;
+	if (Step == 0 && T > 3.f) { GrabPressed(); Step = 1; UE_LOG(LogDeepSweep, Log, TEXT("TEST grab, cible=%s"), *GetNameSafe(HoverTarget.Get())); }
+	else if (Step == 1 && T > 4.5f) { PC->ConsoleCommand(TEXT("shot showui")); Step = 2; UE_LOG(LogDeepSweep, Log, TEXT("TEST porte=%d"), Grab->NumHeld()); }
+	else if (Step == 2 && T > 5.f) { ActionPressed(); Step = 3; }
+	else if (Step == 3 && T > 5.35f) { PC->ConsoleCommand(TEXT("shot showui")); Step = 4; }
+	else if (Step == 4 && T > 7.f) { UE_LOG(LogDeepSweep, Log, TEXT("TEST fin, porte=%d"), Grab->NumHeld()); PC->ConsoleCommand(TEXT("quit")); Step = 5; }
+}
 
 void ADSDiver::Tick(float DeltaSeconds)
 {
@@ -261,6 +303,7 @@ void ADSDiver::Tick(float DeltaSeconds)
 	}
 
 	if (IsLocallyControlled()) UpdateHover();
+	if (IsLocallyControlled() && CVarTestGrab.GetValueOnGameThread() > 0) RunDebugScenario();
 
 	// Cosmetique : inclinaison vers la direction de nage + leger flottement
 	BobTime += DeltaSeconds;
@@ -280,7 +323,7 @@ void ADSDiver::UpdateHover()
 	if (const UDSPickupSubsystem* Sub = GetWorld()->GetSubsystem<UDSPickupSubsystem>())
 	{
 		const FVector Fwd = Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector();
-		Best = Sub->FindBestPickup(GetActorLocation(), (Fwd + GetActorForwardVector()).GetSafeNormal(), GrabRange);
+		Best = Grab->IsFull() ? nullptr : Sub->FindBestPickup(GetActorLocation(), (Fwd + GetActorForwardVector()).GetSafeNormal(), Grab->Range);
 	}
 	if (Best != HoverTarget.Get())
 	{

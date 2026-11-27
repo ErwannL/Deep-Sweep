@@ -40,11 +40,12 @@ Ouvrir `unreal/DeepSweep/DeepSweep.uproject` (carte de démarrage : `/Game/Maps/
 | Nager | ZQSD ou WASD (ou flèches) | Stick gauche |
 | Regarder | Souris | Stick droit |
 | Monter / descendre | Espace / Ctrl gauche ou C | Gâchette droite / gauche |
-| Attraper / interagir | F ou clic gauche | A |
-| Action | G ou clic droit | X ou B |
+| Attraper / lâcher | F ou clic gauche | A |
+| Lancer / action | G ou clic droit | X ou B |
 
 ## Commandes de debug (console `~`)
 - `ds.Debug 1` : compteurs objets total / dormants / actifs / collectés.
+- `ds.TestGrab 1` : scénario automatique attraper → capture → lancer → capture → quitter.
 - `ds.AutoPilot 1` : le plongeur nage seul vers le centre de la crique.
 - `ds.ShotAt 5` : capture d'écran à 5 s puis quitte (vérification automatique).
 - `EnableCheats` puis `BugItGo x y z pitch yaw roll` : téléporte le plongeur.
@@ -61,3 +62,6 @@ _À venir (étape 11 : menu Héberger/Rejoindre, OnlineSubsystemNull en LAN)._
 - [x] Étape 3 — 150 objets de 6 types (Data Assets), flottabilité, système dormant/actif répliqué, code couleur, surbrillance au survol
 
 ![Objets](docs/step3_pickups.png)
+- [x] Étape 4 — pince : attraper (objet visé), porter au-dessus de la tête (ralentit), lâcher, lancer vers la caméra ; validé par le serveur
+
+![Pince](docs/step4_grab.png)

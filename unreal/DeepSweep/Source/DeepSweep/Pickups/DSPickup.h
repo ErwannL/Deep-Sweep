@@ -29,6 +29,15 @@ public:
 	/** Contour lumineux au survol (local uniquement). */
 	void SetHighlighted(bool bOn);
 
+	/** Porteur actuel (plongeur), nullptr si libre. Serveur uniquement pour l'ecriture. */
+	void SetHolder(AActor* NewHolder);
+	AActor* GetHolder() const { return Holder; }
+	bool IsHeld() const { return Holder != nullptr; }
+
+	/** Dernier lanceur (statistiques, credits attribues). */
+	void SetLastThrower(AActor* A) { LastThrower = A; }
+	AActor* GetLastThrower() const { return LastThrower.Get(); }
+
 	/** Empeche l'endormissement (porte, sur machine...). */
 	UPROPERTY(BlueprintReadWrite) bool bKeepAwake = false;
 
@@ -43,6 +52,12 @@ protected:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Type) TObjectPtr<UDSPickupData> Type;
 	UPROPERTY(Replicated) int32 PickupId = INDEX_NONE;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Holder) TObjectPtr<AActor> Holder;
+	TWeakObjectPtr<AActor> LastThrower;
+
+	UFUNCTION() void OnRep_Holder();
+	void ApplyHeldState();
 
 	UFUNCTION() void OnRep_Type();
 	void ApplyType();
