@@ -74,7 +74,7 @@ void ADSPickupManager::BeginPlay()
 void ADSPickupManager::SpawnInitialItems()
 {
 	FRandomStream Rng(Seed);
-	int32 NextId = 0;
+	int32& NextId = NextItemId;
 	for (int32 TypeIndex = 0; TypeIndex < Types.Num(); ++TypeIndex)
 	{
 		const UDSPickupData* T = Types[TypeIndex];
@@ -99,6 +99,42 @@ void ADSPickupManager::SpawnInitialItems()
 	for (TActorIterator<ADSGiantPickup> It(GetWorld()); It; ++It) ++Giants;
 	TotalItems = NextId + Giants;
 	UE_LOG(LogDeepSweep, Log, TEXT("PickupManager : %d objets places (%d types)"), TotalItems, Types.Num());
+}
+
+UDSPickupData* ADSPickupManager::TakeDormant(int32 DormantIndex)
+{
+	if (!HasAuthority() || !Dormant.Items.IsValidIndex(DormantIndex)) return nullptr;
+	const uint8 TI = Dormant.Items[DormantIndex].TypeIndex;
+	Dormant.Items.RemoveAtSwap(DormantIndex);
+	Dormant.MarkArrayDirty();
+	bVisualsDirty = true;
+	return Types.IsValidIndex(TI) ? Types[TI].Get() : nullptr;
+}
+
+void ADSPickupManager::AddDormant(UDSPickupData* Type, const FVector& Location)
+{
+	if (!HasAuthority() || !Type) return;
+	FDSDormantItem& It = Dormant.Items.AddDefaulted_GetRef();
+	It.Id = NextItemId++;
+	It.TypeIndex = static_cast<uint8>(FMath::Max(0, GetTypeIndex(Type)));
+	It.Location = Location;
+	It.Rotation = FRotator(0.f, FMath::FRand() * 360.f, 0.f);
+	Dormant.MarkItemDirty(It);
+	bVisualsDirty = true;
+}
+
+ADSPickup* ADSPickupManager::SpawnActive(UDSPickupData* Type, const FVector& Location, const FVector& Velocity)
+{
+	if (!HasAuthority() || !Type) return nullptr;
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Params.bDeferConstruction = true;
+	ADSPickup* P = GetWorld()->SpawnActor<ADSPickup>(ADSPickup::StaticClass(), FTransform(Location), Params);
+	if (!P) return nullptr;
+	P->InitPickup(Type, NextItemId++);
+	P->FinishSpawning(FTransform(FRotator::ZeroRotator, Location, Type->MeshScale));
+	P->GetMesh()->SetPhysicsLinearVelocity(Velocity);
+	return P;
 }
 
 void ADSPickupManager::GatherDiverLocations(TArray<FVector>& Out) const

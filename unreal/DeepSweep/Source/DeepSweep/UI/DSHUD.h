@@ -15,4 +15,5 @@ private:
 	float ShownCredits = 0.f;
 	void Pill(float X, float Y, float W, float H, const FLinearColor& Col);
 	void Label(const FString& S, float X, float Y, const FLinearColor& Col, float Scale = 1.f, bool bCenter = false);
+	void DrawEndScreen(float S);
 };

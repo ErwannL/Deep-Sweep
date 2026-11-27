@@ -45,6 +45,8 @@ Ouvrir `unreal/DeepSweep/DeepSweep.uproject` (carte de démarrage : `/Game/Maps/
 
 ## Commandes de debug (console `~`)
 - `ds.Debug 1` : compteurs objets total / dormants / actifs / collectés.
+- `ds.EndMatch` : termine la plongée (écran de fin).
+- `ds.TestOcto 1` : scénario automatique poulpe → capture → écran de fin.
 - `ds.TestShop 1` : scénario automatique achat des 5 améliorations + vérification des effets.
 - `ds.TestGiant 1` : scénario automatique porter le coffre jusqu'au comptoir.
 - `ds.TestBelt 1` : scénario automatique cuve → tapis → blocage → déblocage → vente.
@@ -88,3 +90,6 @@ _À venir (étape 11 : menu Héberger/Rejoindre, OnlineSubsystemNull en LAN)._
 - [x] Étape 9 — 5 améliorations achetées sur des pads à la base (crédits partagés, une fois pour l'équipe, appliquées aussi aux joueurs qui arrivent) : sac (3 objets, 30 ₡), pince télescopique (×1,6, 45 ₡), turbo aspirateur (P5, 80 ₡), tapis rapide (×2, 60 ₡), ballons (géants ×1,6, 100 ₡)
 
 ![Boutique](docs/step9_shop.png)
+- [x] Étape 10 — Bob le robot visible au poste du levier (il vide la cuve si personne, s'écarte quand un joueur arrive) ; poulpe voleur (arrive par un bord, vole jusqu'à 3 objets de valeur, fuit ; l'attraper = butin lâché + 20 ₡ ; s'il s'échappe, le butin est caché près du bord) ; écran de fin à 100 % avec temps, crédits, stats par joueur et titres drôles, « replonger »
+
+![Poulpe](docs/step10_octopus.png)

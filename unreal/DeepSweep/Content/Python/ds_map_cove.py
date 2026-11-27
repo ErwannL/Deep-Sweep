@@ -271,6 +271,15 @@ for i, (up, title, desc, cost) in enumerate(UPGRADES):
     pad.set_editor_property("description", desc)
     pad.set_editor_property("cost", cost)
 
+# ---------------------------------------------------------------- Evenement : poulpe voleur + Bob le robot
+octo = eas.spawn_actor_from_class(unreal.DSOctopus, V(3900, 0, 180), R(0, 180, 0))
+octo.set_actor_label("OctopusThief")
+octo.set_folder_path("Gameplay/Events")
+bob = eas.spawn_actor_from_class(unreal.DSBobRobot, V(BASE_X - 50, -1250, 0), R(0, 90, 0))
+bob.set_actor_label("BobRobot")
+bob.set_folder_path("Base/Vacuum")
+bob.set_editor_property("vacuum", vac)
+
 # ---------------------------------------------------------------- Ambiance sale -> coloree (proprete)
 amb = eas.spawn_actor_from_class(unreal.DSAmbienceController, V(0, 0, 0))
 amb.set_actor_label("AmbienceController")

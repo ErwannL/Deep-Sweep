@@ -1,4 +1,4 @@
-#include "Player/DSDiver.h"
+﻿#include "Player/DSDiver.h"
 #include "DeepSweep.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -25,6 +25,8 @@
 #include "Giants/DSGiantPickup.h"
 #include "Giants/DSCarryComponent.h"
 #include "Upgrades/DSUpgradePad.h"
+#include "Events/DSOctopus.h"
+#include "GameFramework/GameModeBase.h"
 #include "Pickups/DSPickupManager.h"
 #include "Pickups/DSPickupData.h"
 #include "Core/DSGameState.h"
@@ -46,6 +48,8 @@ static TAutoConsoleVariable<int32> CVarTestGiant(TEXT("ds.TestGiant"), 0,
 	TEXT("Debug : scenario auto porter le coffre jusqu au comptoir."));
 static TAutoConsoleVariable<int32> CVarTestShop(TEXT("ds.TestShop"), 0,
 	TEXT("Debug : scenario auto credits -> achat des 5 ameliorations -> verification des effets."));
+static TAutoConsoleVariable<int32> CVarTestOcto(TEXT("ds.TestOcto"), 0,
+	TEXT("Debug : scenario auto poulpe voleur -> capture -> ecran de fin."));
 static TAutoConsoleVariable<float> CVarShotAt(TEXT("ds.ShotAt"), 0.f,
 	TEXT("Debug : capture d'ecran a T secondes puis quitte (0 = desactive)."));
 
@@ -321,6 +325,56 @@ void ADSDiver::Server_SetCarryIntent_Implementation(FVector_NetQuantize100 Inten
 	CarryIntent = FVector(Intent).GetClampedToMaxSize(1.f);
 }
 
+void ADSDiver::Server_RequestRestart_Implementation()
+{
+	const ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>();
+	if (GS && GS->IsMatchOver())
+		GetWorld()->ServerTravel(TEXT("?restart"), false); // nouvelle plongee pour tout le monde (clients inclus)
+}
+
+void ADSDiver::RunOctoScenario()
+{
+	static int32 Step = 0;
+	static float StepT = 0.f;
+	const float T = GetWorld()->GetTimeSeconds();
+	APlayerController* PC = Cast<APlayerController>(Controller);
+	ADSOctopus* Octo = nullptr;
+	for (TActorIterator<ADSOctopus> It(GetWorld()); It; ++It) Octo = *It;
+	ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>();
+	if (!PC || !Octo || !GS) return;
+	if (Step == 0 && T > 2.f) { Octo->TriggerNow(); Step = 1; }
+	else if (Step == 1 && Octo->Loot.Num() >= 1)
+	{
+		// Se place pour voir le poulpe avec son butin
+		const FVector O = Octo->GetActorLocation();
+		SetActorLocation(O + FVector(-700.f, 0.f, 250.f));
+		PC->SetControlRotation(FRotator(-12.f, 0.f, 0.f));
+		StepT = T; Step = 2;
+	}
+	else if (Step == 2)
+	{
+		const FVector O = Octo->GetActorLocation();
+		SetActorLocation(O + FVector(-700.f, 0.f, 250.f));
+		if (T > StepT + 0.4f) { PC->ConsoleCommand(TEXT("shot showui")); Step = 3; }
+	}
+	else if (Step == 3)
+	{
+		SetActorLocation(Octo->GetActorLocation() + FVector(-150.f, 0.f, 0.f));
+		UE_LOG(LogDeepSweep, Log, TEXT("TEST poulpe butin=%d etat=%d"), Octo->Loot.Num(), int32(Octo->State));
+		GrabPressed();
+		StepT = T; Step = 4;
+	}
+	else if (Step == 4 && T > StepT + 1.f)
+	{
+		UE_LOG(LogDeepSweep, Log, TEXT("TEST apres capture : etat=%d credits=%d"), int32(Octo->State), GS->GetCredits());
+		GS->EndMatch();
+		StepT = T; Step = 5;
+	}
+	else if (Step == 5 && T > StepT + 1.5f) { PC->ConsoleCommand(TEXT("shot showui")); StepT = T; Step = 6; }
+	else if (Step == 6 && T > StepT + 1.f) { PC->ConsoleCommand(TEXT("quit")); Step = 7; }
+	if (T > 60.f && Step < 7) { UE_LOG(LogDeepSweep, Log, TEXT("TEST timeout step=%d"), Step); PC->ConsoleCommand(TEXT("quit")); Step = 7; }
+}
+
 void ADSDiver::RunShopScenario()
 {
 	static int32 Step = 0;
@@ -503,6 +557,7 @@ void ADSDiver::RunVacScenario()
 
 void ADSDiver::GrabPressed()
 {
+	if (const ADSGameState* EndGS = GetWorld()->GetGameState<ADSGameState>(); EndGS && EndGS->IsMatchOver()) { Server_RequestRestart(); return; }
 	if (IsStunned()) return;
 	// 1) element de la base a portee (comptoir, levier...), 2) objet vise, 3) lacher.
 	if (ADSInteractable* I = ADSInteractable::FindBest(this)) { Server_Interact(I); return; }
@@ -593,6 +648,7 @@ void ADSDiver::Tick(float DeltaSeconds)
 	if (IsLocallyControlled() && CVarTestBelt.GetValueOnGameThread() > 0) RunBeltScenario();
 	if (IsLocallyControlled() && CVarTestGiant.GetValueOnGameThread() > 0) RunGiantScenario();
 	if (IsLocallyControlled() && CVarTestShop.GetValueOnGameThread() > 0) RunShopScenario();
+	if (IsLocallyControlled() && CVarTestOcto.GetValueOnGameThread() > 0) RunOctoScenario();
 
 	// Intention de portage : envoyee au serveur ~10 fois/s (ou des qu'elle change).
 	if (IsLocallyControlled())

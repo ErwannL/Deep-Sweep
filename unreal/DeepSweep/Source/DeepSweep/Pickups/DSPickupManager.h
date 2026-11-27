@@ -79,6 +79,15 @@ public:
 	bool TrySleep(ADSPickup* Pickup);
 
 	void MarkVisualsDirty() { bVisualsDirty = true; }
+
+	// --- Serveur : deplacer des objets sans les faire sortir de la zone (poulpe voleur...)
+	const TArray<FDSDormantItem>& GetDormantItems() const { return Dormant.Items; }
+	/** Retire un objet dormant et renvoie son type. */
+	UDSPickupData* TakeDormant(int32 DormantIndex);
+	/** Pose un objet dormant (ex. butin cache). */
+	void AddDormant(UDSPickupData* Type, const FVector& Location);
+	/** Fait apparaitre un objet actif (ex. butin lache). */
+	ADSPickup* SpawnActive(UDSPickupData* Type, const FVector& Location, const FVector& Velocity);
 	/** Serveur : des objets ont quitte la zone (vendus, casses...) -> met a jour la proprete. */
 	void NotifyCollected(int32 Count);
 	/** Objets supplementaires comptes dans la proprete (objets geants, etape 8). */
@@ -98,5 +107,6 @@ protected:
 	void GatherDiverLocations(TArray<FVector>& Out) const;
 
 	bool bVisualsDirty = true;
+	int32 NextItemId = 0;
 	float ActivationTimer = 0.f;
 };

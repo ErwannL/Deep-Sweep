@@ -87,6 +87,7 @@ protected:
 	void GrabPressed();
 	UFUNCTION(Server, Reliable) void Server_Interact(class ADSInteractable* Target);
 	UFUNCTION(Server, Reliable) void Server_NozzleAction();
+	UFUNCTION(Server, Reliable) void Server_RequestRestart();
 	UPROPERTY(Replicated) float StunUntil = -1.f;
 	UPROPERTY(ReplicatedUsing = OnRep_CarryingGiant) TObjectPtr<ADSGiantPickup> CarryingGiant;
 	UFUNCTION() void OnRep_CarryingGiant();
@@ -105,6 +106,7 @@ private:
 	void RunBeltScenario();
 	void RunGiantScenario();
 	void RunShopScenario();
+	void RunOctoScenario();
 	FVector CarryIntent = FVector::ZeroVector;
 	FVector PendingIntent = FVector::ZeroVector;
 	bool bIntentThisFrame = false;

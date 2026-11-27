@@ -27,6 +27,12 @@ public:
 	bool HasUpgrade(EDSUpgrade U) const { return (OwnedUpgrades & (1u << uint8(U))) != 0; }
 	void GrantUpgrade(EDSUpgrade U) { if (HasAuthority()) OwnedUpgrades |= (1u << uint8(U)); }
 
+	/** Fin de plongee : crique nettoyee a 100 %. */
+	UFUNCTION(BlueprintPure) bool IsMatchOver() const { return bMatchOver; }
+	float GetFinalTime() const { return FinalTime; }
+	/** Serveur. */
+	void EndMatch();
+
 	/** Message court affiche a tous (radio de M. Abysso, alertes). */
 	UFUNCTION(NetMulticast, Reliable) void Multicast_Toast(const FText& Message);
 	FText GetToast(float& OutAge) const { OutAge = GetWorld() ? GetWorld()->GetTimeSeconds() - ToastTime : 99.f; return Toast; }
@@ -39,6 +45,8 @@ protected:
 	UPROPERTY(Replicated) float Cleanliness = 0.f;
 	UPROPERTY(Replicated) float MatchStartTime = 0.f;
 	UPROPERTY(Replicated) uint8 OwnedUpgrades = 0;
+	UPROPERTY(Replicated) bool bMatchOver = false;
+	UPROPERTY(Replicated) float FinalTime = 0.f;
 	FText Toast;
 	float ToastTime = -99.f;
 };
