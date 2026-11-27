@@ -191,6 +191,18 @@ s.set_editor_property("override_vignette_intensity", True)
 s.set_editor_property("vignette_intensity", 0.45)
 pp.set_editor_property("settings", s)
 
+# ---------------------------------------------------------------- Objets (150, 6 types) : manager dormant/actif
+# Tas repris du prototype (x,z three.js -> X=-z, Y=x, en cm).
+pm = eas.spawn_actor_from_class(unreal.DSPickupManager, V(0, 0, 0))
+pm.set_actor_label("PickupManager")
+pm.set_folder_path("Gameplay")
+pm.set_editor_property("types", [unreal.load_asset(f"/Game/Data/Pickups/DA_{n}") for n in
+                                 ("Canette", "Bouteille", "Ferraille", "Pneu", "Caddie", "Vase")])
+pm.set_editor_property("pile_centers", [V(2200, -2200, 0), V(1800, 2000, 0), V(2500, -500, 0),
+                                        V(-800, 2500, 0), V(-800, -2500, 0), V(-500, 500, 0)])
+pm.set_editor_property("pile_radius", 700.0)
+pm.set_editor_property("surface_z", SURFACE_Z - 100)
+
 # ---------------------------------------------------------------- Departs joueurs (4)
 for i in range(4):
     ps = eas.spawn_actor_from_class(unreal.PlayerStart, V(BASE_X + 300, -450 + i * 300, 250), R(0, 0, 0))

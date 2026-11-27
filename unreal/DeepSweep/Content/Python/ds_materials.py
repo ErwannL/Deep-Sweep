@@ -77,6 +77,7 @@ def dirty_of(mat, color_expr, x, y, fraction=0.85, darken=0.6):
 
 def color_material():
     mat = fresh("M_DSColor", unreal.Material, unreal.MaterialFactoryNew())
+    mat.set_editor_property("used_with_instanced_static_meshes", True)
     col = vparam(mat, "Color", unreal.LinearColor(0.8, 0.8, 0.8, 1), -500, 0)
     MEL.connect_material_property(col, "", MP.MP_BASE_COLOR)
     MEL.connect_material_property(sparam(mat, "Roughness", 0.55, -500, 200), "", MP.MP_ROUGHNESS)
@@ -189,7 +190,44 @@ def light_ray_material():
     return finish(mat)
 
 
+def outline_material():
+    """Surbrillance au survol (overlay material) : lueur additive pulsee + liseré fresnel."""
+    mat = fresh("M_DSOutline", unreal.Material, unreal.MaterialFactoryNew())
+    mat.set_editor_property("blend_mode", unreal.BlendMode.BLEND_ADDITIVE)
+    mat.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    fres = expr(mat, unreal.MaterialExpressionFresnel, -900, 100, exponent=3.0, base_reflect_fraction=0.0)
+    rim = expr(mat, unreal.MaterialExpressionMultiply, -700, 100)
+    MEL.connect_material_expressions(fres, "", rim, "A")
+    MEL.connect_material_expressions(const(mat, 2.5, -900, 200), "", rim, "B")
+    base = expr(mat, unreal.MaterialExpressionAdd, -550, 100)
+    MEL.connect_material_expressions(rim, "", base, "A")
+    MEL.connect_material_expressions(const(mat, 0.3, -700, 250), "", base, "B")
+    # pulsation 0.7..1.0
+    t = expr(mat, unreal.MaterialExpressionTime, -1100, 400)
+    tk = expr(mat, unreal.MaterialExpressionMultiply, -950, 400)
+    MEL.connect_material_expressions(t, "", tk, "A")
+    MEL.connect_material_expressions(const(mat, 6.0, -1100, 500), "", tk, "B")
+    sn = expr(mat, unreal.MaterialExpressionSine, -800, 400, period=6.2831853)
+    MEL.connect_material_expressions(tk, "", sn, "")
+    sk = expr(mat, unreal.MaterialExpressionMultiply, -650, 400)
+    MEL.connect_material_expressions(sn, "", sk, "A")
+    MEL.connect_material_expressions(const(mat, 0.15, -800, 500), "", sk, "B")
+    pulse = expr(mat, unreal.MaterialExpressionAdd, -500, 400)
+    MEL.connect_material_expressions(sk, "", pulse, "A")
+    MEL.connect_material_expressions(const(mat, 0.85, -650, 500), "", pulse, "B")
+    col = vparam(mat, "Color", unreal.LinearColor(1.0, 0.95, 0.55, 1), -550, -100)
+    m1 = expr(mat, unreal.MaterialExpressionMultiply, -350, 0)
+    MEL.connect_material_expressions(col, "", m1, "A")
+    MEL.connect_material_expressions(base, "", m1, "B")
+    m2 = expr(mat, unreal.MaterialExpressionMultiply, -200, 150)
+    MEL.connect_material_expressions(m1, "", m2, "A")
+    MEL.connect_material_expressions(pulse, "", m2, "B")
+    MEL.connect_material_property(m2, "", MP.MP_EMISSIVE_COLOR)
+    return finish(mat)
+
+
 mpc = make_mpc()
+outline_material()
 light_ray_material()
 color_material()
 world = world_material(mpc)

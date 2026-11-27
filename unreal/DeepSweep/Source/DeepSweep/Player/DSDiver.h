@@ -8,6 +8,7 @@ class UCameraComponent;
 class UStaticMeshComponent;
 class UInputAction;
 class UInputMappingContext;
+class ADSPickup;
 struct FInputActionValue;
 
 /** Plongeur : nage arcade 6 axes (mode Flying du CharacterMovement, predit et replique nativement). */
@@ -33,6 +34,11 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Swim") float SwimSpeed = 900.f;
 	UPROPERTY(EditAnywhere, Category = "Swim") float VerticalSpeedScale = 0.8f;
+	/** Portee de la pince (cm, depuis le bord de l'objet). */
+	UPROPERTY(EditAnywhere, Category = "Grab") float GrabRange = 220.f;
+
+	/** Objet vise (local) : contour lumineux, cible de la pince. */
+	ADSPickup* GetHoverTarget() const { return HoverTarget.Get(); }
 
 protected:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<USpringArmComponent> CameraBoom;
@@ -65,6 +71,8 @@ protected:
 	void ApplyColor();
 
 private:
+	TWeakObjectPtr<ADSPickup> HoverTarget;
+	void UpdateHover();
 	float BobTime = 0.f;
 	FRotator VisualTilt = FRotator::ZeroRotator;
 };

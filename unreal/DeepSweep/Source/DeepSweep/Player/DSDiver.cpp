@@ -14,6 +14,8 @@
 #include "Net/UnrealNetwork.h"
 #include "HAL/IConsoleManager.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Pickups/DSPickup.h"
+#include "Pickups/DSPickupSubsystem.h"
 
 static TAutoConsoleVariable<int32> CVarAutoPilot(TEXT("ds.AutoPilot"), 0,
 	TEXT("Debug : 1 = le plongeur local nage seul en spirale (captures automatiques)."));
@@ -254,9 +256,11 @@ void ADSDiver::Tick(float DeltaSeconds)
 		static int32 ShotState = 0;
 		const float T = GetWorld()->GetTimeSeconds();
 		APlayerController* PC = Cast<APlayerController>(Controller);
-		if (PC && ShotState == 0 && T > CVarShotAt.GetValueOnGameThread()) { PC->ConsoleCommand(TEXT("HighResShot 1")); ShotState = 1; }
+		if (PC && ShotState == 0 && T > CVarShotAt.GetValueOnGameThread()) { PC->ConsoleCommand(TEXT("shot showui")); ShotState = 1; }
 		else if (PC && ShotState == 1 && T > CVarShotAt.GetValueOnGameThread() + 2.f) { ShotState = 2; PC->ConsoleCommand(TEXT("quit")); }
 	}
+
+	if (IsLocallyControlled()) UpdateHover();
 
 	// Cosmetique : inclinaison vers la direction de nage + leger flottement
 	BobTime += DeltaSeconds;
@@ -268,4 +272,20 @@ void ADSDiver::Tick(float DeltaSeconds)
 	VisualTilt = FMath::RInterpTo(VisualTilt, FRotator(TargetPitch, 0.f, TargetRoll), DeltaSeconds, 5.f);
 	VisualRoot->SetRelativeRotation(VisualTilt);
 	VisualRoot->SetRelativeLocation(FVector(0, 0, FMath::Sin(BobTime * 2.f + ColorIndex) * 6.f));
+}
+
+void ADSDiver::UpdateHover()
+{
+	ADSPickup* Best = nullptr;
+	if (const UDSPickupSubsystem* Sub = GetWorld()->GetSubsystem<UDSPickupSubsystem>())
+	{
+		const FVector Fwd = Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector();
+		Best = Sub->FindBestPickup(GetActorLocation(), (Fwd + GetActorForwardVector()).GetSafeNormal(), GrabRange);
+	}
+	if (Best != HoverTarget.Get())
+	{
+		if (ADSPickup* Old = HoverTarget.Get()) Old->SetHighlighted(false);
+		HoverTarget = Best;
+		if (Best) Best->SetHighlighted(true);
+	}
 }
