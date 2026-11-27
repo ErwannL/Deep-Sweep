@@ -20,7 +20,12 @@ floor.set_actor_label("Floor")
 
 sun = eas.spawn_actor_from_class(unreal.DirectionalLight, unreal.Vector(0, 0, 1000), unreal.Rotator(0, -50, 30))
 sun.set_actor_label("Sun")
-eas.spawn_actor_from_class(unreal.SkyLight, unreal.Vector(0, 0, 500)).set_actor_label("SkyLight")
+eas.spawn_actor_from_class(unreal.SkyAtmosphere, unreal.Vector(0, 0, 0)).set_actor_label("SkyAtmosphere")
+sky = eas.spawn_actor_from_class(unreal.SkyLight, unreal.Vector(0, 0, 500))
+sky.set_actor_label("SkyLight")
+sky.light_component.set_editor_property("real_time_capture", True)
+sky.light_component.set_editor_property("mobility", unreal.ComponentMobility.MOVABLE)
+sun.light_component.set_editor_property("atmosphere_sun_light", True)
 eas.spawn_actor_from_class(unreal.PlayerStart, unreal.Vector(0, 0, 200)).set_actor_label("PlayerStart")
 
 les.save_current_level()

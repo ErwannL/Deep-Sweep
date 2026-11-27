@@ -11,4 +11,5 @@ class DEEPSWEEP_API ADSGameMode : public AGameModeBase
 public:
 	ADSGameMode();
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void RestartPlayer(AController* NewPlayer) override;
 };
