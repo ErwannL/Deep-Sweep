@@ -84,8 +84,11 @@ Lancement direct par ligne de commande (tests) :
 - `ds.ShotAt 5` : capture d'écran à 5 s puis quitte (vérification automatique).
 - `EnableCheats` puis `BugItGo x y z pitch yaw roll` : téléporte le plongeur.
 
-## Héberger / rejoindre
-_À venir (étape 11 : menu Héberger/Rejoindre, OnlineSubsystemNull en LAN)._
+## Fabriquer l'exe à partager
+```powershell
+& "C:\Program Files\Epic Games\UE_5.4\Engine\Build\BatchFiles\RunUAT.bat" BuildCookRun "-project=$PWD\unreal\DeepSweep\DeepSweep.uproject" -platform=Win64 -clientconfig=Development -build -cook -stage -pak -iostore -compressed -prereqs -archive "-archivedirectory=$PWD\unreal\Build" -nop4 -unattended -nocompileeditor
+```
+Résultat : `unreal/Build/Windows/DeepSweep.exe` (+ `LISEZMOI.txt`), à zipper et partager. À plusieurs via Hamachi : l'hôte clique *Héberger une partie*, les autres saisissent son IP Hamachi (25.x.x.x) puis *Rejoindre par IP*.
 
 ## Avancement
 - [x] Étape 0 — squelette C++ qui compile, carte vide générée en Python
