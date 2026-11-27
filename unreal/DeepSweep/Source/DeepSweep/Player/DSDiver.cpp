@@ -22,6 +22,8 @@
 #include "Machines/DSVacuumNozzle.h"
 #include "Machines/DSVacuumControls.h"
 #include "Machines/DSConveyor.h"
+#include "Giants/DSGiantPickup.h"
+#include "Giants/DSCarryComponent.h"
 #include "Pickups/DSPickupManager.h"
 #include "Pickups/DSPickupData.h"
 #include "Core/DSGameState.h"
@@ -39,6 +41,8 @@ static TAutoConsoleVariable<int32> CVarTestVac(TEXT("ds.TestVac"), 0,
 	TEXT("Debug : scenario auto prendre la buse -> aspirer un tas -> captures -> quitte."));
 static TAutoConsoleVariable<int32> CVarTestBelt(TEXT("ds.TestBelt"), 0,
 	TEXT("Debug : scenario auto cuve -> tapis (avec caddie qui bloque) -> deblocage -> vente."));
+static TAutoConsoleVariable<int32> CVarTestGiant(TEXT("ds.TestGiant"), 0,
+	TEXT("Debug : scenario auto porter le coffre jusqu au comptoir."));
 static TAutoConsoleVariable<float> CVarShotAt(TEXT("ds.ShotAt"), 0.f,
 	TEXT("Debug : capture d'ecran a T secondes puis quitte (0 = desactive)."));
 
@@ -121,6 +125,7 @@ void ADSDiver::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ADSDiver, ColorIndex);
 	DOREPLIFETIME(ADSDiver, StunUntil);
+	DOREPLIFETIME(ADSDiver, CarryingGiant);
 }
 
 void ADSDiver::SetColorIndex(uint8 NewIndex)
@@ -247,6 +252,13 @@ void ADSDiver::Move(const FInputActionValue& Value)
 	const FRotator Ctrl = Controller->GetControlRotation();
 	const FVector Fwd = FRotationMatrix(FRotator(FRotator::NormalizeAxis(Ctrl.Pitch) * 0.6f, Ctrl.Yaw, 0.f)).GetUnitAxis(EAxis::X);
 	const FVector Right = FRotationMatrix(FRotator(0.f, Ctrl.Yaw, 0.f)).GetUnitAxis(EAxis::Y);
+	if (CarryingGiant)
+	{
+		const FVector Flat = FRotationMatrix(FRotator(0.f, Ctrl.Yaw, 0.f)).GetUnitAxis(EAxis::X);
+		PendingIntent = (Flat * V.Y + Right * V.X).GetClampedToMaxSize(1.f);
+		bIntentThisFrame = true;
+		return;
+	}
 	AddMovementInput(Fwd, V.Y);
 	AddMovementInput(Right, V.X);
 }
@@ -283,6 +295,73 @@ bool ADSDiver::IsStunned() const
 void ADSDiver::Server_NozzleAction_Implementation()
 {
 	if (ADSVacuumNozzle* N = HeldNozzle.Get()) N->PrimaryAction(this);
+}
+
+void ADSDiver::SetCarryingGiant(ADSGiantPickup* G)
+{
+	CarryingGiant = G;
+	OnRep_CarryingGiant();
+}
+
+ADSGiantPickup* ADSDiver::GetCarryingGiant() const { return CarryingGiant; }
+
+void ADSDiver::OnRep_CarryingGiant()
+{
+	// En portant : plus de deplacement propre, on suit l'objet (attache par l'objet).
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->SetMovementMode(CarryingGiant ? MOVE_None : MOVE_Flying);
+	if (!CarryingGiant) CarryIntent = FVector::ZeroVector;
+}
+
+void ADSDiver::Server_SetCarryIntent_Implementation(FVector_NetQuantize100 Intent)
+{
+	CarryIntent = FVector(Intent).GetClampedToMaxSize(1.f);
+}
+
+void ADSDiver::RunGiantScenario()
+{
+	static int32 Step = 0;
+	const float T = GetWorld()->GetTimeSeconds();
+	APlayerController* PC = Cast<APlayerController>(Controller);
+	ADSGiantPickup* Chest = nullptr;
+	for (TActorIterator<ADSGiantPickup> It(GetWorld()); It; ++It) if (It->GetCarry()->DesignCarriers == 2) Chest = *It;
+	ADSCounter* Counter = nullptr;
+	for (TActorIterator<ADSCounter> It(GetWorld()); It; ++It) Counter = *It;
+	if (!PC || !Counter) return;
+	if (Step == 0 && T > 2.f && Chest)
+	{
+		SetActorLocation(Chest->GetActorLocation() + FVector(-250.f, 0.f, 60.f));
+		Step = 1;
+	}
+	else if (Step == 1 && T > 2.5f && Chest)
+	{
+		GrabPressed();
+		UE_LOG(LogDeepSweep, Log, TEXT("TEST porte geant=%s requis=%d facteur=%.2f"), *GetNameSafe(CarryingGiant), Chest->GetCarry()->GetRequiredCarriers(), Chest->GetCarry()->GetSpeedFactor());
+		Step = 2;
+	}
+	else if (Step >= 2 && Step < 5)
+	{
+		// Pousse vers le comptoir ; la camera regarde dans la meme direction
+		if (CarryingGiant)
+		{
+			const FVector To = (Counter->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
+			PC->SetControlRotation(FRotator(-20.f, To.Rotation().Yaw, 0.f));
+			PendingIntent = To;
+			bIntentThisFrame = true;
+		}
+		if (Step == 2 && T > 7.f) { PC->ConsoleCommand(TEXT("shot showui")); Step = 3; }
+		if (Step == 3 && !Chest) { Step = 4; }
+		if (Step == 4)
+		{
+			const ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>();
+			UE_LOG(LogDeepSweep, Log, TEXT("TEST coffre livre a t=%.1f, credits=%d proprete=%.3f"), T, GS ? GS->GetCredits() : -1, GS ? GS->GetCleanliness() : -1.f);
+			PC->ConsoleCommand(TEXT("shot showui"));
+			Step = 5;
+		}
+	}
+	else if (Step == 5 && T > 0.f) { Step = 6; }
+	else if (Step == 6) { PC->ConsoleCommand(TEXT("quit")); Step = 7; }
+	if (T > 90.f && Step < 7) { UE_LOG(LogDeepSweep, Log, TEXT("TEST timeout step=%d"), Step); PC->ConsoleCommand(TEXT("quit")); Step = 7; }
 }
 
 void ADSDiver::RunBeltScenario()
@@ -457,6 +536,22 @@ void ADSDiver::Tick(float DeltaSeconds)
 	if (IsLocallyControlled() && CVarTestSell.GetValueOnGameThread() > 0) RunSellScenario();
 	if (IsLocallyControlled() && CVarTestVac.GetValueOnGameThread() > 0) RunVacScenario();
 	if (IsLocallyControlled() && CVarTestBelt.GetValueOnGameThread() > 0) RunBeltScenario();
+	if (IsLocallyControlled() && CVarTestGiant.GetValueOnGameThread() > 0) RunGiantScenario();
+
+	// Intention de portage : envoyee au serveur ~10 fois/s (ou des qu'elle change).
+	if (IsLocallyControlled())
+	{
+		const FVector Now = (CarryingGiant && bIntentThisFrame) ? PendingIntent : FVector::ZeroVector;
+		bIntentThisFrame = false;
+		CarryIntent = Now;
+		IntentSendTimer -= DeltaSeconds;
+		if (CarryingGiant && (IntentSendTimer <= 0.f || !Now.Equals(LastSentIntent, 0.05f)))
+		{
+			IntentSendTimer = 0.1f;
+			LastSentIntent = Now;
+			if (!HasAuthority()) Server_SetCarryIntent(Now);
+		}
+	}
 
 	// Vitesse : calculee pareil sur serveur et client (prediction) a partir d'etats repliques.
 	{

@@ -11,6 +11,7 @@ class UInputMappingContext;
 class ADSPickup;
 class UDSGrabComponent;
 class ADSVacuumNozzle;
+class ADSGiantPickup;
 struct FInputActionValue;
 
 /** Plongeur : nage arcade 6 axes (mode Flying du CharacterMovement, predit et replique nativement). */
@@ -46,6 +47,12 @@ public:
 
 	/** Buse tenue (mise a jour par la buse, sur toutes les machines). */
 	void SetHeldNozzle(ADSVacuumNozzle* N);
+
+	/** Objet geant porte (serveur ecrit, replique). */
+	void SetCarryingGiant(ADSGiantPickup* G);
+	ADSGiantPickup* GetCarryingGiant() const;
+	/** Direction voulue par ce porteur (plan horizontal, norme <= 1). */
+	FVector GetCarryIntent() const { return CarryIntent; }
 	ADSVacuumNozzle* GetHeldNozzle() const;
 
 	/** Objet vise (local) : contour lumineux, cible de la pince. */
@@ -81,6 +88,9 @@ protected:
 	UFUNCTION(Server, Reliable) void Server_Interact(class ADSInteractable* Target);
 	UFUNCTION(Server, Reliable) void Server_NozzleAction();
 	UPROPERTY(Replicated) float StunUntil = -1.f;
+	UPROPERTY(ReplicatedUsing = OnRep_CarryingGiant) TObjectPtr<ADSGiantPickup> CarryingGiant;
+	UFUNCTION() void OnRep_CarryingGiant();
+	UFUNCTION(Server, Unreliable) void Server_SetCarryIntent(FVector_NetQuantize100 Intent);
 	void ActionPressed();
 
 	UFUNCTION() void OnRep_ColorIndex();
@@ -93,6 +103,12 @@ private:
 	void RunSellScenario();
 	void RunVacScenario();
 	void RunBeltScenario();
+	void RunGiantScenario();
+	FVector CarryIntent = FVector::ZeroVector;
+	FVector PendingIntent = FVector::ZeroVector;
+	bool bIntentThisFrame = false;
+	float IntentSendTimer = 0.f;
+	FVector LastSentIntent = FVector::ZeroVector;
 	TWeakObjectPtr<ADSVacuumNozzle> HeldNozzle;
 	float CarrySpeedFactor = 1.f;
 	float BobTime = 0.f;

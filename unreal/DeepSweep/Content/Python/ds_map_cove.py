@@ -238,6 +238,22 @@ for p in (V(BASE_X + 200, -1080, 60), V(BASE_X + 200, 400, 60), V(BASE_X + 200, 
     spl.add_spline_point(p, unreal.SplineCoordinateSpace.WORLD, False)
 spl.update_spline()
 
+# ---------------------------------------------------------------- Objets geants coop
+chest = eas.spawn_actor_from_class(unreal.DSGiantPickup, V(2800, 1800, 90), R(0, 20, 0))
+chest.set_actor_label("Giant_Chest")
+chest.set_folder_path("Gameplay/Giants")
+chest.set_editor_property("display_name", "Coffre")
+chest.set_editor_property("shape", unreal.DSGiantShape.CHEST)
+chest.set_editor_property("value", 300)
+chest.set_editor_property("color", unreal.LinearColor(0.55, 0.32, 0.12, 1))
+statue = eas.spawn_actor_from_class(unreal.DSGiantPickup, V(3000, -2800, 225), R(0, 0, 0))
+statue.set_actor_label("Giant_Statue")
+statue.set_folder_path("Gameplay/Giants")
+statue.set_editor_property("display_name", "Statue")
+statue.set_editor_property("shape", unreal.DSGiantShape.STATUE)
+statue.set_editor_property("value", 600)
+statue.set_editor_property("color", unreal.LinearColor(0.85, 0.83, 0.77, 1))
+
 # ---------------------------------------------------------------- Ambiance sale -> coloree (proprete)
 amb = eas.spawn_actor_from_class(unreal.DSAmbienceController, V(0, 0, 0))
 amb.set_actor_label("AmbienceController")

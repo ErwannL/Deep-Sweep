@@ -11,6 +11,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Core/DSGameState.h"
 #include "Machines/DSVacuumNozzle.h"
+#include "Giants/DSGiantPickup.h"
 #include "HAL/IConsoleManager.h"
 
 static TAutoConsoleVariable<int32> CVarPickupDebug(TEXT("ds.Debug"), 0,
@@ -94,7 +95,9 @@ void ADSPickupManager::SpawnInitialItems()
 			Dormant.MarkItemDirty(It);
 		}
 	}
-	TotalItems = NextId;
+	int32 Giants = 0;
+	for (TActorIterator<ADSGiantPickup> It(GetWorld()); It; ++It) ++Giants;
+	TotalItems = NextId + Giants;
 	UE_LOG(LogDeepSweep, Log, TEXT("PickupManager : %d objets places (%d types)"), TotalItems, Types.Num());
 }
 

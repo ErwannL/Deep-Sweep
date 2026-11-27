@@ -45,6 +45,7 @@ Ouvrir `unreal/DeepSweep/DeepSweep.uproject` (carte de démarrage : `/Game/Maps/
 
 ## Commandes de debug (console `~`)
 - `ds.Debug 1` : compteurs objets total / dormants / actifs / collectés.
+- `ds.TestGiant 1` : scénario automatique porter le coffre jusqu'au comptoir.
 - `ds.TestBelt 1` : scénario automatique cuve → tapis → blocage → déblocage → vente.
 - `ds.TestVac 1` : scénario automatique prendre la buse → aspirer un tas.
 - `ds.SetClean 0.5` : force la propreté affichée (−1 = valeur réelle).
@@ -80,3 +81,6 @@ _À venir (étape 11 : menu Héberger/Rejoindre, OnlineSubsystemNull en LAN)._
 - [x] Étape 7 — convoyeur logique cuve → comptoir (spline + instances, éléments logiques répliqués par fast array, extrapolés côté client), blocage par caddie à mi-chemin + déblocage, objets lancés sur le tapis récupérés
 
 ![Convoyeur](docs/step7_conveyor.png)
+- [x] Étape 8 — objets géants coop : coffre (2 porteurs, 300 ₡) et statue (3, 600 ₡) ; porteurs requis plafonnés au nombre de joueurs ; vitesse selon le nombre de porteurs ; direction = moyenne des intentions (rotation si désaccord) ; livraison au comptoir
+
+![Coffre](docs/step8_giant.png)
