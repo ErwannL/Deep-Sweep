@@ -10,6 +10,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Net/UnrealNetwork.h"
 #include "Core/DSGameState.h"
+#include "Machines/DSVacuumNozzle.h"
 #include "HAL/IConsoleManager.h"
 
 static TAutoConsoleVariable<int32> CVarPickupDebug(TEXT("ds.Debug"), 0,
@@ -163,12 +164,16 @@ void ADSPickupManager::UpdateActivation()
 	if (Divers.Num() == 0) return;
 	const UDSPickupSubsystem* Sub = GetWorld()->GetSubsystem<UDSPickupSubsystem>();
 	int32 Active = Sub ? Sub->NumActive() : 0;
-	const float R2 = FMath::Square(ActivationRadius);
+	// Sources d'activation : plongeurs + buses qui aspirent (rayon d'aspiration).
+	TArray<TPair<FVector, float>> Sources;
+	for (const FVector& D : Divers) Sources.Emplace(D, FMath::Square(ActivationRadius));
+	for (TActorIterator<ADSVacuumNozzle> It(GetWorld()); It; ++It)
+		if (It->IsSucking()) Sources.Emplace(It->GetActorLocation(), FMath::Square(It->GetActivationRadius()));
 	for (int32 i = Dormant.Items.Num() - 1; i >= 0 && Active < MaxActive; --i)
 	{
 		const FVector L = Dormant.Items[i].Location;
-		for (const FVector& D : Divers)
-			if (FVector::DistSquared(D, L) < R2)
+		for (const TPair<FVector, float>& Src : Sources)
+			if (FVector::DistSquared(Src.Key, L) < Src.Value)
 			{
 				if (Activate(i)) ++Active;
 				break;

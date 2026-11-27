@@ -34,6 +34,12 @@ bool ADSGameState::SpendCredits(int32 Amount)
 	return true;
 }
 
+void ADSGameState::Multicast_Toast_Implementation(const FText& Message)
+{
+	Toast = Message;
+	ToastTime = GetWorld()->GetTimeSeconds();
+}
+
 void ADSGameState::SetCleanliness(float Value)
 {
 	if (HasAuthority()) Cleanliness = FMath::Clamp(Value, 0.f, 1.f);

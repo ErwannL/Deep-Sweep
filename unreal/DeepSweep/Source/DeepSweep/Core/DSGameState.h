@@ -22,6 +22,10 @@ public:
 	bool SpendCredits(int32 Amount);
 	void SetCleanliness(float Value);
 
+	/** Message court affiche a tous (radio de M. Abysso, alertes). */
+	UFUNCTION(NetMulticast, Reliable) void Multicast_Toast(const FText& Message);
+	FText GetToast(float& OutAge) const { OutAge = GetWorld() ? GetWorld()->GetTimeSeconds() - ToastTime : 99.f; return Toast; }
+
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -29,4 +33,6 @@ protected:
 	UPROPERTY(Replicated) int32 Credits = 0;
 	UPROPERTY(Replicated) float Cleanliness = 0.f;
 	UPROPERTY(Replicated) float MatchStartTime = 0.f;
+	FText Toast;
+	float ToastTime = -99.f;
 };

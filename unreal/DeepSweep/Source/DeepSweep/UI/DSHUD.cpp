@@ -2,6 +2,8 @@
 #include "Core/DSGameState.h"
 #include "Player/DSDiver.h"
 #include "World/DSInteractable.h"
+#include "Machines/DSVacuum.h"
+#include "EngineUtils.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
@@ -54,6 +56,24 @@ void ADSHUD::DrawHUD()
 	const int32 T = FMath::FloorToInt(GS->GetElapsedTime());
 	Pill(X, Y, 110 * S, H, Bg);
 	Label(FString::Printf(TEXT("%d:%02d"), T / 60, T % 60), X + 16 * S, Y + 8 * S, FLinearColor::White, 1.3f * S);
+
+	X += 125 * S;
+	// Aspirateur
+	for (TActorIterator<ADSVacuum> It(GetWorld()); It; ++It)
+	{
+		const ADSVacuum* V = *It;
+		Pill(X, Y, 330 * S, H, Bg);
+		const FLinearColor C = V->Clog ? FLinearColor(1.f, 0.5f, 0.2f) : V->IsFull() ? FLinearColor(1.f, 0.3f, 0.3f) : FLinearColor::White;
+		Label(FString::Printf(TEXT("Aspirateur P%d/%d  Cuve %d/%d%s"), V->Power, V->MaxPower, V->TankCount, V->Capacity, V->Clog ? TEXT(" BOUCHE") : TEXT("")),
+			X + 14 * S, Y + 8 * S, C, 1.2f * S);
+		break;
+	}
+
+	// Message (toast)
+	float Age = 0.f;
+	const FText Toast = GS->GetToast(Age);
+	if (!Toast.IsEmpty() && Age < 2.8f)
+		Label(Toast.ToString(), Canvas->ClipX * 0.5f, Canvas->ClipY * 0.2f, FLinearColor(1.f, 1.f, 1.f, FMath::Clamp((2.8f - Age) * 2.f, 0.f, 1.f)), 1.9f * S, true);
 
 	// Aide contextuelle
 	if (const ADSDiver* Diver = Cast<ADSDiver>(GetOwningPawn()))

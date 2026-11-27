@@ -18,6 +18,10 @@
 #include "Player/DSGrabComponent.h"
 #include "World/DSInteractable.h"
 #include "World/DSCounter.h"
+#include "Machines/DSVacuum.h"
+#include "Machines/DSVacuumNozzle.h"
+#include "Machines/DSVacuumControls.h"
+#include "GameFramework/GameStateBase.h"
 #include "EngineUtils.h"
 #include "Pickups/DSPickupSubsystem.h"
 
@@ -27,6 +31,8 @@ static TAutoConsoleVariable<int32> CVarTestGrab(TEXT("ds.TestGrab"), 0,
 	TEXT("Debug : scenario auto (attrape la cible a 3 s, capture, lance a 5 s, capture, quitte)."));
 static TAutoConsoleVariable<int32> CVarTestSell(TEXT("ds.TestSell"), 0,
 	TEXT("Debug : scenario auto attraper -> aller au comptoir -> vendre -> capture -> quitte."));
+static TAutoConsoleVariable<int32> CVarTestVac(TEXT("ds.TestVac"), 0,
+	TEXT("Debug : scenario auto prendre la buse -> aspirer un tas -> captures -> quitte."));
 static TAutoConsoleVariable<float> CVarShotAt(TEXT("ds.ShotAt"), 0.f,
 	TEXT("Debug : capture d'ecran a T secondes puis quitte (0 = desactive)."));
 
@@ -108,6 +114,7 @@ void ADSDiver::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ADSDiver, ColorIndex);
+	DOREPLIFETIME(ADSDiver, StunUntil);
 }
 
 void ADSDiver::SetColorIndex(uint8 NewIndex)
@@ -227,6 +234,7 @@ void ADSDiver::SetupPlayerInputComponent(UInputComponent* PIC)
 
 void ADSDiver::Move(const FInputActionValue& Value)
 {
+	if (IsStunned()) return;
 	const FVector2D V = Value.Get<FVector2D>();
 	if (!Controller) return;
 	// Nage arcade : l'avant suit la camera (avec une partie de son inclinaison), la droite reste horizontale.
@@ -246,17 +254,67 @@ void ADSDiver::Look(const FInputActionValue& Value)
 
 void ADSDiver::Vertical(const FInputActionValue& Value)
 {
+	if (IsStunned()) return;
 	AddMovementInput(FVector::UpVector, Value.Get<float>() * VerticalSpeedScale);
 }
 
 void ADSDiver::SetCarrySpeedFactor(float Factor)
 {
 	CarrySpeedFactor = Factor;
-	GetCharacterMovement()->MaxFlySpeed = SwimSpeed * CarrySpeedFactor;
+}
+
+void ADSDiver::Stun(float Duration)
+{
+	if (const AGameStateBase* GS = GetWorld()->GetGameState()) StunUntil = GS->GetServerWorldTimeSeconds() + Duration;
+}
+
+bool ADSDiver::IsStunned() const
+{
+	const AGameStateBase* GS = GetWorld() ? GetWorld()->GetGameState() : nullptr;
+	return GS && GS->GetServerWorldTimeSeconds() < StunUntil;
+}
+
+void ADSDiver::Server_NozzleAction_Implementation()
+{
+	if (ADSVacuumNozzle* N = HeldNozzle.Get()) N->PrimaryAction(this);
+}
+
+void ADSDiver::RunVacScenario()
+{
+	static int32 Step = 0;
+	const float T = GetWorld()->GetTimeSeconds();
+	APlayerController* PC = Cast<APlayerController>(Controller);
+	if (!PC) return;
+	ADSVacuumNozzle* Noz = nullptr;
+	for (TActorIterator<ADSVacuumNozzle> It(GetWorld()); It; ++It) Noz = *It;
+	if (!Noz) return;
+	if (Step == 0 && T > 2.f)
+	{
+		SetActorLocation(Noz->GetActorLocation() + FVector(-120.f, 0.f, 80.f));
+		Step = 1;
+	}
+	else if (Step == 1 && T > 2.5f) { GrabPressed(); Step = 2; }
+	else if (Step == 2 && T > 3.f)
+	{
+		// Devant le tas pres de la base, face au tas, aspiration
+		SetActorLocation(FVector(-1350.f, 450.f, 160.f));
+		PC->SetControlRotation(FRotator(-8.f, 0.f, 0.f));
+		ActionPressed();
+		Step = 3;
+	}
+	else if (Step == 3) { AddMovementInput(FVector(1, 0, 0), 0.6f); if (T > 6.f) { PC->ConsoleCommand(TEXT("shot showui")); Step = 4; } }
+	else if (Step == 4) { AddMovementInput(FVector(1, 0.2f * FMath::Sin(T), 0), 0.6f); if (T > 11.f) { PC->ConsoleCommand(TEXT("shot showui")); Step = 5; } }
+	else if (Step == 5 && T > 12.f)
+	{
+		for (TActorIterator<ADSVacuum> It(GetWorld()); It; ++It) UE_LOG(LogDeepSweep, Log, TEXT("TEST cuve=%d bouchon=%d"), It->TankCount, It->Clog);
+		PC->ConsoleCommand(TEXT("quit"));
+		Step = 6;
+	}
 }
 
 void ADSDiver::GrabPressed()
 {
+	if (IsStunned()) return;
 	// 1) element de la base a portee (comptoir, levier...), 2) objet vise, 3) lacher.
 	if (ADSInteractable* I = ADSInteractable::FindBest(this)) { Server_Interact(I); return; }
 	ADSPickup* Target = HoverTarget.Get();
@@ -266,7 +324,9 @@ void ADSDiver::GrabPressed()
 
 void ADSDiver::ActionPressed()
 {
-	// Lancer dans la direction de la camera.
+	if (IsStunned()) return;
+	// Buse en main : allumer/eteindre ou taper sur le bouchon. Sinon lancer.
+	if (HeldNozzle.IsValid()) { Server_NozzleAction(); return; }
 	if (Grab->NumHeld() > 0)
 	{
 		const FVector Aim = Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector();
@@ -340,6 +400,15 @@ void ADSDiver::Tick(float DeltaSeconds)
 	if (IsLocallyControlled()) UpdateHover();
 	if (IsLocallyControlled() && CVarTestGrab.GetValueOnGameThread() > 0) RunDebugScenario();
 	if (IsLocallyControlled() && CVarTestSell.GetValueOnGameThread() > 0) RunSellScenario();
+	if (IsLocallyControlled() && CVarTestVac.GetValueOnGameThread() > 0) RunVacScenario();
+
+	// Vitesse : calculee pareil sur serveur et client (prediction) a partir d'etats repliques.
+	{
+		float F = CarrySpeedFactor;
+		if (HeldNozzle.IsValid()) F *= 0.72f;
+		if (IsStunned()) F = 0.f;
+		GetCharacterMovement()->MaxFlySpeed = SwimSpeed * F;
+	}
 
 	// Cosmetique : inclinaison vers la direction de nage + leger flottement
 	BobTime += DeltaSeconds;
@@ -349,7 +418,7 @@ void ADSDiver::Tick(float DeltaSeconds)
 	const float TargetPitch = FMath::Clamp(Vel.Z / SwimSpeed, -1.f, 1.f) * 35.f - Speed01 * 25.f;
 	const float TargetRoll = FMath::Clamp(LocalVel.Y / SwimSpeed, -1.f, 1.f) * 25.f;
 	VisualTilt = FMath::RInterpTo(VisualTilt, FRotator(TargetPitch, 0.f, TargetRoll), DeltaSeconds, 5.f);
-	VisualRoot->SetRelativeRotation(VisualTilt);
+	VisualRoot->SetRelativeRotation(IsStunned() ? FRotator(VisualTilt.Pitch, 0.f, GetWorld()->GetTimeSeconds() * 720.f) : VisualTilt);
 	VisualRoot->SetRelativeLocation(FVector(0, 0, FMath::Sin(BobTime * 2.f + ColorIndex) * 6.f));
 }
 
@@ -368,3 +437,6 @@ void ADSDiver::UpdateHover()
 		if (Best) Best->SetHighlighted(true);
 	}
 }
+
+void ADSDiver::SetHeldNozzle(ADSVacuumNozzle* N) { HeldNozzle = N; }
+ADSVacuumNozzle* ADSDiver::GetHeldNozzle() const { return HeldNozzle.Get(); }

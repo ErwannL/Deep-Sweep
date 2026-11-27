@@ -8,7 +8,7 @@ public class DeepSweep : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
 			"Niagara", "PhysicsCore", "NetCore", "UMG", "Slate", "SlateCore",
-			"OnlineSubsystem", "OnlineSubsystemUtils"
+			"OnlineSubsystem", "OnlineSubsystemUtils", "CableComponent"
 		});
 	}
 }

@@ -10,6 +10,7 @@ class UInputAction;
 class UInputMappingContext;
 class ADSPickup;
 class UDSGrabComponent;
+class ADSVacuumNozzle;
 struct FInputActionValue;
 
 /** Plongeur : nage arcade 6 axes (mode Flying du CharacterMovement, predit et replique nativement). */
@@ -38,6 +39,14 @@ public:
 	UDSGrabComponent* GetGrab() const { return Grab; }
 	/** Ralentissement quand on porte (applique cote serveur et client pour la prediction). */
 	void SetCarrySpeedFactor(float Factor);
+
+	/** Sonne (aspire par un collegue...) : plus de controle pendant Duration. Serveur. */
+	void Stun(float Duration);
+	bool IsStunned() const;
+
+	/** Buse tenue (mise a jour par la buse, sur toutes les machines). */
+	void SetHeldNozzle(ADSVacuumNozzle* N);
+	ADSVacuumNozzle* GetHeldNozzle() const;
 
 	/** Objet vise (local) : contour lumineux, cible de la pince. */
 	ADSPickup* GetHoverTarget() const { return HoverTarget.Get(); }
@@ -70,6 +79,8 @@ protected:
 	void Vertical(const FInputActionValue& Value);
 	void GrabPressed();
 	UFUNCTION(Server, Reliable) void Server_Interact(class ADSInteractable* Target);
+	UFUNCTION(Server, Reliable) void Server_NozzleAction();
+	UPROPERTY(Replicated) float StunUntil = -1.f;
 	void ActionPressed();
 
 	UFUNCTION() void OnRep_ColorIndex();
@@ -80,6 +91,8 @@ private:
 	void UpdateHover();
 	void RunDebugScenario();
 	void RunSellScenario();
+	void RunVacScenario();
+	TWeakObjectPtr<ADSVacuumNozzle> HeldNozzle;
 	float CarrySpeedFactor = 1.f;
 	float BobTime = 0.f;
 	FRotator VisualTilt = FRotator::ZeroRotator;
