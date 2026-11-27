@@ -271,7 +271,22 @@ Nettoyer une zone à 100 % → débloquer la suivante → revenir dans les ancie
 - *Fonctionnement :* le Comptoir de vente a une balance : un lot pile au poids d'un contrat donne un bonus. Les joueurs ajoutent/retirent objets en temps réel avant de valider.
 - *Fun :* petite négociation collective.
 
-### 6.3 Outils sociaux
+### 6.3 Fun garanti de 1 à 4 joueurs
+
+Règle de conception : **aucun contenu n'est bloqué par le nombre de joueurs, mais chaque joueur en plus ouvre de nouvelles stratégies.**
+
+| Système | Solo | 2 joueurs | 3–4 joueurs |
+|---|---|---|---|
+| **Postes de machine** | Bob le robot tient les postes vides (puissance par défaut, vidage auto lent). Le joueur alterne les postes. | Un joueur à la buse, l'autre gère console/levier/convoyeur. | Spécialisation complète, Bob devient inutile. |
+| **Objets géants** | Portables seul mais lents (~35–60 % de vitesse), ballons recommandés. | Coffres à pleine vitesse, statues à ~80 %. | Tout à pleine vitesse, objets colossaux réservés. |
+| **Densité de la zone** | Même zone, mêmes objets : le défi est le temps, pas la difficulté. | — | Événements plus fréquents pour garder le chaos. |
+| **Économie** | Prix des upgrades personnels identiques. | Upgrades personnels −15 %. | −25 % (évite de payer 4 fois). |
+| **Accidents** | Contre soi-même (s'aspirer est impossible, mais casser des vases oui). | Aspirer son collègue, se bloquer. | Chaos maximal, stats de fin humoristiques. |
+| **Caméra (local)** | Suit le joueur. | Caméra partagée qui dézoome. | Idem, écran partagé en option en ligne. |
+
+Le prototype applique déjà ces règles (Bob, porteurs plafonnés, caméra partagée).
+
+### 6.4 Outils sociaux
 - **Ping contextuel** (objet, danger, « viens ici », « j'ai besoin de bras »).
 - **Klaxon de casque** et emotes (pouce, panique, danse de victoire).
 - **Tableau de fin de session** humoristique : « Plus grand nombre de collègues aspirés », « A cassé le plus de vases antiques ».
