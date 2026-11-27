@@ -69,6 +69,7 @@ protected:
 	void Look(const FInputActionValue& Value);
 	void Vertical(const FInputActionValue& Value);
 	void GrabPressed();
+	UFUNCTION(Server, Reliable) void Server_Interact(class ADSInteractable* Target);
 	void ActionPressed();
 
 	UFUNCTION() void OnRep_ColorIndex();
@@ -78,6 +79,7 @@ private:
 	TWeakObjectPtr<ADSPickup> HoverTarget;
 	void UpdateHover();
 	void RunDebugScenario();
+	void RunSellScenario();
 	float CarrySpeedFactor = 1.f;
 	float BobTime = 0.f;
 	FRotator VisualTilt = FRotator::ZeroRotator;

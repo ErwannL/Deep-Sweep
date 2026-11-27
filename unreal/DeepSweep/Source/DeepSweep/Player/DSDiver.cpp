@@ -16,12 +16,17 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Pickups/DSPickup.h"
 #include "Player/DSGrabComponent.h"
+#include "World/DSInteractable.h"
+#include "World/DSCounter.h"
+#include "EngineUtils.h"
 #include "Pickups/DSPickupSubsystem.h"
 
 static TAutoConsoleVariable<int32> CVarAutoPilot(TEXT("ds.AutoPilot"), 0,
 	TEXT("Debug : 1 = le plongeur local nage seul en spirale (captures automatiques)."));
 static TAutoConsoleVariable<int32> CVarTestGrab(TEXT("ds.TestGrab"), 0,
 	TEXT("Debug : scenario auto (attrape la cible a 3 s, capture, lance a 5 s, capture, quitte)."));
+static TAutoConsoleVariable<int32> CVarTestSell(TEXT("ds.TestSell"), 0,
+	TEXT("Debug : scenario auto attraper -> aller au comptoir -> vendre -> capture -> quitte."));
 static TAutoConsoleVariable<float> CVarShotAt(TEXT("ds.ShotAt"), 0.f,
 	TEXT("Debug : capture d'ecran a T secondes puis quitte (0 = desactive)."));
 
@@ -252,7 +257,8 @@ void ADSDiver::SetCarrySpeedFactor(float Factor)
 
 void ADSDiver::GrabPressed()
 {
-	// Attraper l'objet vise ; sinon (ou sac plein) lacher ce qu'on porte.
+	// 1) element de la base a portee (comptoir, levier...), 2) objet vise, 3) lacher.
+	if (ADSInteractable* I = ADSInteractable::FindBest(this)) { Server_Interact(I); return; }
 	ADSPickup* Target = HoverTarget.Get();
 	if (Target && !Grab->IsFull()) Grab->RequestGrab(Target);
 	else if (Grab->NumHeld() > 0) Grab->RequestDrop();
@@ -266,6 +272,35 @@ void ADSDiver::ActionPressed()
 		const FVector Aim = Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector();
 		Grab->RequestThrow(Aim);
 	}
+}
+
+void ADSDiver::Server_Interact_Implementation(ADSInteractable* Target)
+{
+	// Revalide cote serveur (portee + conditions).
+	if (IsValid(Target) && Target->IsInRange(this) && Target->CanInteract(this)) Target->Interact(this);
+}
+
+void ADSDiver::RunSellScenario()
+{
+	static int32 Step = 0;
+	const float T = GetWorld()->GetTimeSeconds();
+	APlayerController* PC = Cast<APlayerController>(Controller);
+	if (!PC) return;
+	if (Step == 0 && T > 3.f) { GrabPressed(); Step = 1; }
+	else if (Step == 1 && T > 3.5f)
+	{
+		// Teleporte devant le comptoir (debug) et le regarde
+		for (TActorIterator<ADSCounter> It(GetWorld()); It; ++It)
+		{
+			const FVector C = It->GetActorLocation();
+			SetActorLocation(C + FVector(-350.f, -250.f, 150.f));
+			PC->SetControlRotation((C - GetActorLocation()).Rotation() + FRotator(-10.f, 0.f, 0.f));
+		}
+		Step = 2;
+	}
+	else if (Step == 2 && T > 5.f) { UE_LOG(LogDeepSweep, Log, TEXT("TEST vente, porte=%d"), Grab->NumHeld()); GrabPressed(); Step = 3; }
+	else if (Step == 3 && T > 5.25f) { PC->ConsoleCommand(TEXT("shot showui")); Step = 4; }
+	else if (Step == 4 && T > 6.5f) { UE_LOG(LogDeepSweep, Log, TEXT("TEST fin, porte=%d"), Grab->NumHeld()); PC->ConsoleCommand(TEXT("quit")); Step = 5; }
 }
 
 void ADSDiver::RunDebugScenario()
@@ -304,6 +339,7 @@ void ADSDiver::Tick(float DeltaSeconds)
 
 	if (IsLocallyControlled()) UpdateHover();
 	if (IsLocallyControlled() && CVarTestGrab.GetValueOnGameThread() > 0) RunDebugScenario();
+	if (IsLocallyControlled() && CVarTestSell.GetValueOnGameThread() > 0) RunSellScenario();
 
 	// Cosmetique : inclinaison vers la direction de nage + leger flottement
 	BobTime += DeltaSeconds;

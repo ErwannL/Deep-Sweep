@@ -45,6 +45,8 @@ Ouvrir `unreal/DeepSweep/DeepSweep.uproject` (carte de démarrage : `/Game/Maps/
 
 ## Commandes de debug (console `~`)
 - `ds.Debug 1` : compteurs objets total / dormants / actifs / collectés.
+- `ds.SetClean 0.5` : force la propreté affichée (−1 = valeur réelle).
+- `ds.TestSell 1` : scénario automatique attraper → comptoir → vendre.
 - `ds.TestGrab 1` : scénario automatique attraper → capture → lancer → capture → quitter.
 - `ds.AutoPilot 1` : le plongeur nage seul vers le centre de la crique.
 - `ds.ShotAt 5` : capture d'écran à 5 s puis quitte (vérification automatique).
@@ -65,3 +67,8 @@ _À venir (étape 11 : menu Héberger/Rejoindre, OnlineSubsystemNull en LAN)._
 - [x] Étape 4 — pince : attraper (objet visé), porter au-dessus de la tête (ralentit), lâcher, lancer vers la caméra ; validé par le serveur
 
 ![Pince](docs/step4_grab.png)
+- [x] Étape 5 — comptoir (vente à la main ou en lançant dans la trémie), crédits partagés, stats par joueur, % de propreté qui fait passer la crique de sale à colorée, HUD
+
+| Sale (0 %) | Propre (100 %) |
+|---|---|
+| ![Sale](docs/step5_dirty.png) | ![Propre](docs/step5_clean.png) |

@@ -27,6 +27,7 @@ ADSPickup::ADSPickup()
 	Mesh->SetAngularDamping(1.2f);
 	Mesh->BodyInstance.bUseCCD = false;
 	Mesh->SetCanEverAffectNavigation(false);
+	Mesh->SetGenerateOverlapEvents(true); // tremie du comptoir, aspirateur...
 	RootComponent = Mesh;
 
 	Buoyancy = CreateDefaultSubobject<UDSBuoyancyComponent>(TEXT("Buoyancy"));

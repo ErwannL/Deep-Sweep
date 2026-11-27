@@ -9,6 +9,7 @@
 #include "EngineUtils.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Net/UnrealNetwork.h"
+#include "Core/DSGameState.h"
 #include "HAL/IConsoleManager.h"
 
 static TAutoConsoleVariable<int32> CVarPickupDebug(TEXT("ds.Debug"), 0,
@@ -99,6 +100,19 @@ void ADSPickupManager::SpawnInitialItems()
 void ADSPickupManager::GatherDiverLocations(TArray<FVector>& Out) const
 {
 	for (TActorIterator<APawn> It(GetWorld()); It; ++It) Out.Add(It->GetActorLocation());
+}
+
+void ADSPickupManager::NotifyCollected(int32 Count)
+{
+	if (!HasAuthority()) return;
+	CollectedItems += Count;
+	if (ADSGameState* GS = GetWorld()->GetGameState<ADSGameState>())
+		GS->SetCleanliness(TotalItems > 0 ? float(CollectedItems) / float(TotalItems) : 0.f);
+}
+
+void ADSPickupManager::AddExtraItems(int32 Count)
+{
+	if (HasAuthority()) TotalItems += Count;
 }
 
 ADSPickup* ADSPickupManager::Activate(int32 DormantIndex)

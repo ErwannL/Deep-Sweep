@@ -79,6 +79,10 @@ public:
 	bool TrySleep(ADSPickup* Pickup);
 
 	void MarkVisualsDirty() { bVisualsDirty = true; }
+	/** Serveur : des objets ont quitte la zone (vendus, casses...) -> met a jour la proprete. */
+	void NotifyCollected(int32 Count);
+	/** Objets supplementaires comptes dans la proprete (objets geants, etape 8). */
+	void AddExtraItems(int32 Count);
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;

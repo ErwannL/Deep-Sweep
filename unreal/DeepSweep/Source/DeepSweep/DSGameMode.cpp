@@ -1,12 +1,18 @@
 #include "DSGameMode.h"
 #include "DeepSweep.h"
 #include "Player/DSDiver.h"
+#include "Core/DSGameState.h"
+#include "Core/DSPlayerState.h"
+#include "UI/DSHUD.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 
 ADSGameMode::ADSGameMode()
 {
 	DefaultPawnClass = ADSDiver::StaticClass();
+	GameStateClass = ADSGameState::StaticClass();
+	PlayerStateClass = ADSPlayerState::StaticClass();
+	HUDClass = ADSHUD::StaticClass();
 	bUseSeamlessTravel = true;
 }
 

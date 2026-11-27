@@ -203,6 +203,20 @@ pm.set_editor_property("pile_centers", [V(2200, -2200, 0), V(1800, 2000, 0), V(2
 pm.set_editor_property("pile_radius", 700.0)
 pm.set_editor_property("surface_z", SURFACE_Z - 100)
 
+# ---------------------------------------------------------------- Base : comptoir (prototype : x=+14, z=30)
+counter = eas.spawn_actor_from_class(unreal.DSCounter, V(BASE_X + 200, 1400, 0), R(0, 180, 0))
+counter.set_actor_label("Counter")
+counter.set_folder_path("Base")
+
+# ---------------------------------------------------------------- Ambiance sale -> coloree (proprete)
+amb = eas.spawn_actor_from_class(unreal.DSAmbienceController, V(0, 0, 0))
+amb.set_actor_label("AmbienceController")
+amb.set_folder_path("Gameplay")
+amb.set_editor_property("fog", fog)
+amb.set_editor_property("post_process", pp)
+amb.set_editor_property("sun", sun)
+amb.set_editor_property("collection", unreal.load_asset("/Game/Materials/MPC_DS"))
+
 # ---------------------------------------------------------------- Departs joueurs (4)
 for i in range(4):
     ps = eas.spawn_actor_from_class(unreal.PlayerStart, V(BASE_X + 300, -450 + i * 300, 250), R(0, 0, 0))
