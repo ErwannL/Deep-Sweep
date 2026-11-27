@@ -110,7 +110,7 @@ function spawnBubble(x,y,z){const m=new THREE.Mesh(bubGeo,bubMat);m.position.set
 const labels=[];
 function label(text,getPos){const d=document.createElement('div');d.className='lbl';d.textContent=text;document.body.appendChild(d);const L={d,getPos,set(t){d.textContent=t}};labels.push(L);return L;}
 const v3=new THREE.Vector3();
-function updateLabels(){for(const L of labels){const p=L.getPos();if(!p){L.d.style.display='none';continue}v3.copy(p).project(camera);if(v3.z>1){L.d.style.display='none';continue}L.d.style.display='block';L.d.style.left=((v3.x+1)/2*innerWidth)+'px';L.d.style.top=((1-v3.y)/2*innerHeight)+'px';}}
+function updateLabels(){for(const L of labels){const p=L.getPos();if(!p){L.d.style.display='none';continue}v3.copy(p).project(camera);if(v3.z>1){L.d.style.display='none';continue}L.d.style.display='block';let x=(v3.x+1)/2*innerWidth,y=(1-v3.y)/2*innerHeight;if(L.clamp){x=Math.min(innerWidth-90,Math.max(90,x));y=Math.min(innerHeight-20,Math.max(80,y));}L.d.style.left=x+'px';L.d.style.top=y+'px';}}
 
 let toastT=0;function toast(t){const e=document.getElementById('toast');e.textContent=t;toastT=2.5;}
 
@@ -190,6 +190,49 @@ const vac={power:2,max:3,tank:[],cap:30,fullT:0};
 const owned={};const pads=[];
 UPG.forEach((u,i)=>{const p=new THREE.Vector3(-8+i*4,0,BASE_Z+8);const m=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.2,.3,16),new THREE.MeshLambertMaterial({color:0x9b59b6}));m.position.set(p.x,.15,p.z);scene.add(m);const L=label('',()=>v3b(p.x,1.2,p.z));pads.push({u,p,m,L});});
 
+// ---------- Événement : le poulpe voleur ----------
+const octo={state:'idle',t:0,loot:[],pos:new THREE.Vector3(),g:new THREE.Group(),edge:null};
+{const head=new THREE.Mesh(new THREE.SphereGeometry(1,14,12),new THREE.MeshLambertMaterial({color:0xa040c0}));head.scale.y=1.2;head.position.y=.6;octo.g.add(head);
+ for(let i=0;i<8;i++){const l=new THREE.Mesh(new THREE.ConeGeometry(.22,1.6,6),new THREE.MeshLambertMaterial({color:0x8a30aa}));const a=i/8*Math.PI*2;l.position.set(Math.cos(a)*.6,-.5,Math.sin(a)*.6);l.rotation.set(Math.sin(a)*.6,0,-Math.cos(a)*.6);octo.g.add(l);}
+ for(const sx of[-.35,.35]){const e=new THREE.Mesh(new THREE.SphereGeometry(.2,8,8),new THREE.MeshBasicMaterial({color:0xffffff}));e.position.set(sx,.9,.85);octo.g.add(e);}}
+octo.g.visible=false;scene.add(octo.g);
+const octoLbl=label('🐙 Voleur ! (attraper)',()=>octo.state==='idle'?null:v3b(octo.pos.x,octo.pos.y+2.4,octo.pos.z));octoLbl.clamp=true;octoLbl.d.style.background='#a040c0';
+function octoDrop(at){for(const it of octo.loot){it.state='free';it.pos.copy(at).add(new THREE.Vector3((Math.random()-.5)*3,.5,(Math.random()-.5)*3));it.vel.set((Math.random()-.5)*4,3,(Math.random()-.5)*4);}octo.loot=[];}
+function octoUpdate(dt,time){
+  if(octo.state==='idle'){
+    octo.t-=dt;
+    if(octo.t<=0&&cleared<totalItems*.9&&items.some(i=>i.state==='free')){
+      const a=Math.random()*Math.PI;octo.pos.set(Math.cos(a)*ARENA,1.5,-Math.sin(a)*ARENA);octo.state='hunt';octo.g.visible=true;
+      toast('🐙 Un poulpe voleur ! Attrapez-le !');sfx(300,.4,'sawtooth',.08,300);
+    }
+    return;
+  }
+  let goal;
+  if(octo.state==='hunt'){
+    let best=null,bs=-1e9;for(const it of items){if(it.state!=='free')continue;const sc=it.t.val*3-dXZ(it.pos,octo.pos);if(sc>bs){bs=sc;best=it;}}
+    if(!best||octo.loot.length>=3){octo.state='flee';}
+    else{goal=best.pos;if(octo.pos.distanceTo(best.pos)<1.6){best.state='octo';octo.loot.push(best);sfx(700,.1,'sine',.08,-300);}}
+  }
+  if(octo.state==='flee'){
+    if(!octo.edge){const d=octo.pos.clone().setY(0);if(d.lengthSq()<1)d.set(1,0,0);d.setLength(ARENA+1);octo.edge=d;d.z=Math.min(d.z,BASE_Z-4);}
+    goal=octo.edge;
+  }
+  if(goal){const d=goal.clone().sub(octo.pos);const sp=octo.state==='flee'?6.5:7.5;if(d.length()>.01)octo.pos.addScaledVector(d.normalize(),Math.min(sp*dt,d.length()));octo.g.rotation.y=Math.atan2(d.x,d.z);}
+  octo.pos.y=1.8+Math.sin(time*5)*.4;
+  octo.g.position.copy(octo.pos);octo.g.scale.setScalar(1+Math.sin(time*8)*.06);
+  octo.loot.forEach((it,i)=>it.pos.set(octo.pos.x+Math.cos(time*3+i*2)*.9,octo.pos.y+1.4,octo.pos.z+Math.sin(time*3+i*2)*.9));
+  if(octo.state==='flee'&&dXZ(octo.pos,octo.edge)<1){
+    // Anti-frustration : le butin n'est pas perdu, il est caché près du bord.
+    const at=octo.pos.clone().setLength(ARENA-3);at.y=0;octoDrop(at);
+    toast('🐙 Le poulpe a caché son butin près du bord…');octoReset();
+  }
+}
+function octoReset(){octo.state='idle';octo.edge=null;octo.g.visible=false;octo.t=Math.max(60,150-20*N)+Math.random()*60;}
+function octoCatch(p){
+  for(let i=0;i<30;i++)spawnBubble(octo.pos.x+(Math.random()-.5)*3,octo.pos.y+(Math.random()-.5)*2,octo.pos.z+(Math.random()-.5)*3);
+  octoDrop(octo.pos);sell(20,octo.pos.clone().setY(3),p);toast('🐙 Attrapé ! Il lâche tout (+20₡)');jingle();octoReset();
+}
+
 // ---------- Joueurs ----------
 const players=[];
 function makePlayer(idx,input){
@@ -234,7 +277,7 @@ let N=1,t0=0;
 function startGame(){
   mode='play';N=joined.length;joined.forEach((s,i)=>makePlayer(i,s));
   document.getElementById('lobby').style.display='none';document.getElementById('hud').style.display='flex';
-  t0=performance.now();
+  t0=performance.now();octoReset();octo.t=45+Math.random()*30;
   toast(N===1?'Solo : Bob le robot tient la console et le levier 🤖':N+' plongeurs — au travail !');
 }
 
@@ -243,7 +286,11 @@ const capacity=()=>owned.sac?3:1;
 const grabRange=()=>owned.pince?3.6:2.2;
 const dXZ=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 let credits=0,cleared=0;const popups=[];
-function sell(val,where,who){credits+=val;if(who)who.stats.sold+=val;popups.push({t:'+'+val+'₡',p:where.clone(),life:1.2});}
+// ---------- Sons (WebAudio, aucun fichier) ----------
+let AC=null,combo=0,comboT=0,lastSuckSfx=0;
+function sfx(f,d=.08,type='sine',vol=.12,slide=0,delay=0){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const t=AC.currentTime+delay;const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+d);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02);}catch(e){}}
+function jingle(){[523,659,784,1047].forEach((f,i)=>sfx(f,.15,'triangle',.12,0,i*.08));}
+function sell(val,where,who){combo++;comboT=1.5;sfx(440+Math.min(combo,40)*22,.07,'triangle',.08);credits+=val;if(who)who.stats.sold+=val;popups.push({t:'+'+val+'₡',p:where.clone(),life:1.2});}
 function clearItem(it){if(it.state==='gone')return;it.state='gone';scene.remove(it.mesh);cleared++;}
 function giantNeeded(g){
   // Le nombre de porteurs requis s'adapte au nombre de joueurs : jamais impossible, toujours plus rapide à plusieurs.
@@ -258,6 +305,7 @@ function onGrab(p){
   // candidats
   const opts=[];
   if(BELT.jam&&dXZ(p.pos,BELT.jam.pos)<3)opts.push([dXZ(p.pos,BELT.jam.pos)-1,()=>{BELT.jam.jammedT=-1;BELT.jam=null;toast('Débloqué !');}]);
+  if(octo.state!=='idle'&&dXZ(p.pos,octo.pos)<3)opts.push([-5,()=>octoCatch(p)]);
   if(dXZ(p.pos,LEVER)<2.5)opts.push([dXZ(p.pos,LEVER),()=>dumpTank()]);
   for(const pd of pads)if(dXZ(p.pos,pd.p)<1.8)opts.push([dXZ(p.pos,pd.p),()=>buy(pd.u)]);
   if(p.held.length&&dXZ(p.pos,COMPTOIR)<4)opts.push([0,()=>{for(const it of p.held){sell(it.t.val,COMPTOIR.clone().setY(3),p);clearItem(it);}p.held=[];}]);
@@ -269,7 +317,7 @@ function onGrab(p){
 }
 function onAct(p){
   if(p.stun>0)return;
-  if(nozzle.holder===p){if(nozzle.clog>0){nozzle.clog--;toast(nozzle.clog?'Tape encore ! ('+nozzle.clog+')':'Tuyau débouché !');return;}nozzle.on=!nozzle.on;return;}
+  if(nozzle.holder===p){if(nozzle.clog>0){nozzle.clog--;sfx(nozzle.clog?160:600,.12,'square',.08);toast(nozzle.clog?'Tape encore ! ('+nozzle.clog+')':'Tuyau débouché !');return;}nozzle.on=!nozzle.on;return;}
   if(dXZ(p.pos,CONSOLE)<2.5){vac.power=vac.power%vac.max+1;toast('Puissance '+vac.power+(vac.power>=4?' ⚠️ DANGER':''));return;}
   if(p.held.length){const it=p.held.pop();dropItem(it,p,true);}
 }
@@ -286,7 +334,7 @@ function dumpTank(){
 function buy(u){
   if(owned[u.id]){toast('Déjà acheté');return;}
   if(credits<u.cost){toast('Pas assez de crédits ('+u.cost+'₡)');return;}
-  credits-=u.cost;owned[u.id]=true;toast('✨ '+u.name+' !');
+  credits-=u.cost;owned[u.id]=true;toast('✨ '+u.name+' !');jingle();
   if(u.id==='puiss')vac.max=5;
 }
 
@@ -338,7 +386,7 @@ function update(dt){
     // Les porteurs se placent autour
     let k=0;for(const p of g.carriers){const a=k/c*Math.PI*2+g.mesh.rotation.y;p.pos.x=g.pos.x+Math.cos(a)*2.4;p.pos.z=g.pos.z+Math.sin(a)*2.4;k++;}
     g.lbl.set(`${g.name} ${c}/${need} 🤝 · ${g.val}₡`);
-    if(dXZ(g.pos,COMPTOIR)<5){g.alive=false;scene.remove(g.mesh);for(const p of g.carriers){p.handle=null;}const share=g.carriers.size||1;for(const p of g.carriers)p.stats.sold+=g.val/share;credits+=g.val;popups.push({t:'+'+g.val+'₡ 🎉',p:COMPTOIR.clone().setY(4),life:2});g.carriers.clear();cleared++;toast(g.name+' livré(e) ! 🎉');}
+    if(dXZ(g.pos,COMPTOIR)<5){g.alive=false;scene.remove(g.mesh);for(const p of g.carriers){p.handle=null;}const share=g.carriers.size||1;for(const p of g.carriers)p.stats.sold+=g.val/share;credits+=g.val;popups.push({t:'+'+g.val+'₡ 🎉',p:COMPTOIR.clone().setY(4),life:2});g.carriers.clear();cleared++;toast(g.name+' livré(e) ! 🎉');jingle();}
   }
 
   // Aspirateur
@@ -359,14 +407,14 @@ function update(dt){
       const fwd=d.dot(face)/Math.max(dist,.01);if(fwd<.3&&dist>1.2)continue;
       it.vel.addScaledVector(d.normalize(),-(vac.power*6+8)*dt*(1.4-dist/(R+1)));
       if(dist<1.2){
-        if(it.t.clog&&Math.random()<.6){nozzle.clog=3;it.vel.set(0,0,0);toast('🚫 Caddie coincé ! Tape (action) ×3');continue;}
-        if(it.t.fragile&&vac.power>=4){clearItem(it);toast('💥 Vase brisé… (trop puissant)');nozzle.holder.stats.broken++;continue;}
-        it.state='tank';it.mesh.visible=false;vac.tank.push(it);
+        if(it.t.clog&&Math.random()<.6){nozzle.clog=3;it.vel.set(0,0,0);toast('🚫 Caddie coincé ! Tape (action) ×3');sfx(110,.35,'square',.1);continue;}
+        if(it.t.fragile&&vac.power>=4){clearItem(it);toast('💥 Vase brisé… (trop puissant)');sfx(1200,.25,'sawtooth',.07,-1000);nozzle.holder.stats.broken++;continue;}
+        it.state='tank';it.mesh.visible=false;vac.tank.push(it);if(time-lastSuckSfx>.06){lastSuckSfx=time;sfx(180+Math.random()*80,.06,'sine',.06,400);}
         if(vac.tank.length>=vac.cap){vac.fullT=0;toast('Cuve pleine ! Levier 🔧');}
       }
     }
     // Puissance ≥4 : on aspire les collègues !
-    if(vac.power>=4)for(const p of players){if(p===nozzle.holder||p.stun>0||p.handle)continue;const d=p.pos.clone().sub(nozzle.pos);d.y=0;const dist=d.length();if(dist<R&&d.dot(face)>0){p.vel.addScaledVector(d.normalize(),-(vac.power-3)*14*dt);if(dist<1.4){p.pos.set(TANK.x+(Math.random()-.5)*3,1.5,TANK.z-3);p.vel.set(0,0,0);p.stun=1.5;nozzle.holder.stats.sucked++;toast('😵 J'+(p.idx+1)+' a été recyclé !');}}}
+    if(vac.power>=4)for(const p of players){if(p===nozzle.holder||p.stun>0||p.handle)continue;const d=p.pos.clone().sub(nozzle.pos);d.y=0;const dist=d.length();if(dist<R&&d.dot(face)>0){p.vel.addScaledVector(d.normalize(),-(vac.power-3)*14*dt);if(dist<1.4){p.pos.set(TANK.x+(Math.random()-.5)*3,1.5,TANK.z-3);p.vel.set(0,0,0);p.stun=1.5;nozzle.holder.stats.sucked++;toast('😵 J'+(p.idx+1)+' a été recyclé !');sfx(500,.7,'sine',.2,-420);}}}
   }
   // Bob : levier automatique si personne n'est au levier
   if(vac.tank.length){
@@ -410,6 +458,8 @@ function update(dt){
     for(const p of players){const dx=a.pos.x-p.pos.x,dz=a.pos.z-p.pos.z,d=Math.hypot(dx,dz);if(d<a.r+.6&&d>0&&Math.abs(a.pos.y-p.pos.y)<1.5){a.vel.x+=dx/d*4;a.vel.z+=dz/d*4;}}}
   for(const it of items){if(it.state==='gone'||it.state==='tank')continue;it.mesh.position.copy(it.pos);it.spin+=dt*(it.state==='free'?Math.min(3,it.vel.length()):1);it.mesh.rotation.set(it.spin*.7,it.spin,0);}
 
+  octoUpdate(dt,time);
+  comboT-=dt;if(comboT<=0)combo=0;
   // Bulles
   if(Math.random()<dt*12)spawnBubble(BUBBLE.x+(Math.random()-.5)*2,.3,BUBBLE.z+(Math.random()-.5)*2);
   if(sucking&&Math.random()<dt*20)spawnBubble(nozzle.pos.x,nozzle.pos.y,nozzle.pos.z);
@@ -448,17 +498,18 @@ function endGame(time){
   const best=(f)=>players.reduce((a,b)=>f(b)>f(a)?b:a);
   const rows=players.map(p=>`<tr><td style="color:#${COLORS[p.idx].toString(16).padStart(6,'0')}"><b>J${p.idx+1}</b></td><td>${Math.floor(p.stats.sold)}₡ rapportés</td><td>${p.stats.sucked} collègues aspirés</td><td>${p.stats.broken} vases cassés</td></tr>`).join('');
   const e=document.getElementById('end');e.style.display='flex';
-  e.innerHTML=`<h1>🌈 Crique nettoyée !</h1><p>Temps : ${Math.floor(time/60)} min ${Math.floor(time%60)} s · ${Math.floor(credits)}₡ en banque</p><table>${rows}</table>${N>1?`<p>🏆 Employé du mois : J${best(p=>p.stats.sold).idx+1}${players.some(p=>p.stats.sucked)?` · 🌀 Recycleur en chef : J${best(p=>p.stats.sucked).idx+1}`:''}</p>`:''}<p>Rechargez la page pour rejouer.</p>`;
+  e.innerHTML=`<h1>🌈 Crique nettoyée !</h1><p>Temps : ${Math.floor(time/60)} min ${Math.floor(time%60)} s · ${Math.floor(credits)}₡ en banque</p><table>${rows}</table>${N>1?`<p>🏆 Employé du mois : J${best(p=>p.stats.sold).idx+1}${players.some(p=>p.stats.sucked)?` · 🌀 Recycleur en chef : J${best(p=>p.stats.sucked).idx+1}`:''}</p>`:''}<p>Appuyez sur <b>R</b> ou <b>Start</b> pour rejouer.</p>`;
 }
 
 function loop(){
   const dt=Math.min(clock.getDelta(),.05);
   if(mode==='lobby'){lobbyTick();camera.position.set(Math.sin(performance.now()/4000)*30,25,30);camera.lookAt(0,0,0);}
   else if(mode==='play')update(dt);
+  else if(mode==='end'&&(keys['KeyR']||[...navigator.getGamepads()].some(g=>g&&g.buttons[9]?.pressed)))location.reload();
   updateLabels();renderer.render(scene,camera);requestAnimationFrame(loop);
 }
 loop();
-window.__ds={items,players,giants,vac,get credits(){return credits},set credits(v){credits=v},get cleared(){return cleared},keys};
+window.__ds={octo,items,players,giants,vac,get credits(){return credits},set credits(v){credits=v},get cleared(){return cleared},keys};
 })();
 </script>
 </body>

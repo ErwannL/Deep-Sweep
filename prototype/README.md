@@ -21,7 +21,9 @@ Dans le menu, chaque joueur appuie sur **attraper** pour rejoindre, puis **Espac
 - **Cuve + levier + convoyeur** vers le comptoir ; les caddies bloquent le tapis (attraper pour débloquer).
 - **Objets géants coop** : coffre (2 porteurs) et statue (3 porteurs).
 - **5 améliorations** sur les pastilles violettes de la base.
-- **Objectif** : 100 % de propreté → la crique reprend ses couleurs, écran de fin avec stats.
+- **Poulpe voleur** (événement) : vole jusqu'à 3 objets précieux ; l'attraper le fait tout lâcher (+20₡), sinon il cache son butin près du bord. Plus fréquent à plusieurs.
+- **Sons** générés (combo de vente qui monte en pitch, aspiration, bouchons…).
+- **Objectif** : 100 % de propreté → la crique reprend ses couleurs, écran de fin avec stats, **R** / **Start** pour rejouer.
 
 ## Fun de 1 à 4 joueurs
 - **Bob le robot** occupe les postes vides : la console reste à puissance 2 et il vide la cuve automatiquement (plus lentement qu'un humain).
