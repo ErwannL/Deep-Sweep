@@ -2,6 +2,7 @@
 #include "UI/DSUIStyle.h"
 #include "Net/DSSessionSubsystem.h"
 #include "Core/DSUserSettings.h"
+#include "Net/DSUpdateSubsystem.h"
 #include "Camera/CameraActor.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/Engine.h"
@@ -52,10 +53,11 @@ void SDSMainMenu::Construct(const FArguments& InArgs)
 			+ SVerticalBox::Slot().AutoHeight()[ DSUI::Title(LOCTEXT("Title", "DEEP SWEEP"), 78) ]
 			+ SVerticalBox::Slot().AutoHeight().Padding(4, 0, 0, 26)
 			[ SNew(STextBlock).Text(LOCTEXT("Tag", "Le fond de l'ocean est un enorme tas. Videz-le. Ensemble.")).Font(DSUI::Font(17, false)).ColorAndOpacity(FLinearColor(1, 1, 1, 0.85f)) ]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 12)[ BuildUpdateBanner() ]
 			+ SVerticalBox::Slot().AutoHeight()
 			[
 				DSUI::Card(
-					SAssignNew(Pages, SWidgetSwitcher)
+					SAssignNew(Pages, SWidgetSwitcher).IsEnabled_Lambda([this]() { return CanPlay() || (Pages.IsValid() && Pages->GetActiveWidgetIndex() == 2); })
 					+ SWidgetSwitcher::Slot()[ BuildHome() ]
 					+ SWidgetSwitcher::Slot()[ BuildJoin() ]
 					+ SWidgetSwitcher::Slot()[ BuildOptions() ]
@@ -65,9 +67,31 @@ void SDSMainMenu::Construct(const FArguments& InArgs)
 			[ SNew(SBox).WidthOverride(560.f)[ SNew(STextBlock).Text(this, &SDSMainMenu::GetStatus).ColorAndOpacity(this, &SDSMainMenu::GetStatusColor).Font(DSUI::Font(16)).AutoWrapText(true) ] ]
 		]
 		+ SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Bottom).Padding(30.f)
-		[ SNew(STextBlock).Text(LOCTEXT("Ver", "v0.2  -  1 a 4 plongeurs  -  Hamachi : rejoins avec l'IP 25.x.x.x de l'hote")).Font(DSUI::Font(13, false)).ColorAndOpacity(FLinearColor(1, 1, 1, 0.6f)) ]
+		[ SNew(STextBlock).Text(LOCTEXT("Ver", "v0.3  -  1 a 4 plongeurs  -  Hamachi : rejoins avec l'IP 25.x.x.x de l'hote")).Font(DSUI::Font(13, false)).ColorAndOpacity(FLinearColor(1, 1, 1, 0.6f)) ]
 	];
 	Refresh();
+}
+
+bool SDSMainMenu::CanPlay() const
+{
+	const UDSUpdateSubsystem* U = Sessions.IsValid() ? Sessions->GetGameInstance()->GetSubsystem<UDSUpdateSubsystem>() : nullptr;
+	return !U || !U->IsPlayBlocked();
+}
+
+TSharedRef<SWidget> SDSMainMenu::BuildUpdateBanner()
+{
+	TWeakObjectPtr<UDSUpdateSubsystem> U = Sessions.IsValid() ? Sessions->GetGameInstance()->GetSubsystem<UDSUpdateSubsystem>() : nullptr;
+	return SNew(SBox).WidthOverride(560.f).Visibility_Lambda([U]() { return U.IsValid() && U->IsPlayBlocked() ? EVisibility::Visible : EVisibility::Collapsed; })
+	[
+		DSUI::Card(
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight()[ SNew(STextBlock).Font(DSUI::Font(20)).ColorAndOpacity(FLinearColor(1.f, 0.8f, 0.3f)).AutoWrapText(true)
+				.Text_Lambda([U]() { return FText::Format(LOCTEXT("UpdTitle", "Mise a jour obligatoire : {0} est sortie (tu as v{1})."), FText::FromString(U.IsValid() ? U->GetLatestVersion() : FString()), FText::FromString(U.IsValid() ? U->GetLocalVersion() : FString())); }) ]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0, 6)[ SNew(STextBlock).Font(DSUI::Font(15, false)).AutoWrapText(true)
+				.Text(LOCTEXT("UpdBody", "Installe la nouvelle version pour jouer (tout le monde doit avoir la meme). Le telechargement s'ouvre dans ton navigateur.")) ]
+			+ SVerticalBox::Slot().AutoHeight()[ DSUI::Button(LOCTEXT("UpdBtn", "Telecharger la mise a jour"), FOnClicked::CreateLambda([U]() { if (U.IsValid()) U->OpenDownload(); return FReply::Handled(); }), DSUI::Orange, 500.f, 20) ],
+			FMargin(24.f, 18.f))
+	];
 }
 
 TSharedRef<SWidget> SDSMainMenu::BuildHome()
@@ -205,6 +229,7 @@ void ADSMenuPlayerController::BeginPlay()
 	Menu = SNew(SDSMainMenu).Sessions(S).Settings(Set);
 	GEngine->GameViewport->AddViewportWidgetContent(Menu.ToSharedRef(), 10);
 	if (S) ChangedHandle = S->OnChanged.AddLambda([this]() { if (Menu.IsValid()) Menu->Refresh(); });
+	if (UDSUpdateSubsystem* U = GetGameInstance()->GetSubsystem<UDSUpdateSubsystem>()) U->OnChanged.AddWeakLambda(this, [this]() { if (Menu.IsValid()) Menu->Refresh(); });
 	bShowMouseCursor = true;
 	FInputModeUIOnly Mode;
 	Mode.SetWidgetToFocus(Menu);

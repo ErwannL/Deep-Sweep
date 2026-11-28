@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
 #include "GameFramework/GameModeBase.h"
@@ -43,6 +43,8 @@ private:
 	TSharedRef<SWidget> BuildHome();
 	TSharedRef<SWidget> BuildJoin();
 	TSharedRef<SWidget> BuildOptions();
+	TSharedRef<SWidget> BuildUpdateBanner();
+	bool CanPlay() const;
 };
 
 UCLASS()

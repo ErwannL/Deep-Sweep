@@ -35,6 +35,8 @@ ADSVacuumConsole::ADSVacuumConsole()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	InteractRadius = 250.f;
+	LabelHeight = 220.f;
+	LabelColor = FLinearColor(0.1f, 0.25f, 0.8f);
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
 	Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Body"));
 	Body->SetStaticMesh(Cube.Object);
@@ -83,6 +85,8 @@ ADSVacuumLever::ADSVacuumLever()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	InteractRadius = 250.f;
+	LabelHeight = 420.f;
+	LabelColor = FLinearColor(0.75f, 0.6f, 0.05f);
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cyl(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 	Base = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Base"));
@@ -128,5 +132,8 @@ void ADSVacuumLever::Tick(float DeltaSeconds)
 	PullAnim = FMath::Max(0.f, PullAnim - DeltaSeconds * 1.5f);
 	Stick->SetRelativeRotation(FRotator(0.f, 0.f, -35.f * FMath::Sin(PullAnim * PI)));
 }
+
+FText ADSVacuumConsole::GetStationLabel() const { return LOCTEXT("StConsole", "CONSOLE : puissance de l'aspirateur"); }
+FText ADSVacuumLever::GetStationLabel() const { return LOCTEXT("StLever", "LEVIER : vider la cuve sur le tapis"); }
 
 #undef LOCTEXT_NAMESPACE

@@ -28,6 +28,7 @@ public:
 
 	virtual bool CanInteract(const ADSDiver* Diver) const override;
 	virtual FText GetPrompt(const ADSDiver* Diver) const override;
+	virtual FText GetStationLabel() const override;
 	virtual void Interact(ADSDiver* Diver) override;
 	/** Serveur : "action" du porteur (allumer/eteindre ou taper sur le bouchon). */
 	void PrimaryAction(ADSDiver* Diver);
@@ -51,4 +52,5 @@ protected:
 	UFUNCTION(NetMulticast, Unreliable) void Multicast_Popup(FVector_NetQuantize Location, const FText& Text, FColor Color);
 
 	TWeakObjectPtr<ADSDiver> LastHolder;
+	float SwirlTimer = 0.f;
 };

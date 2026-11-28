@@ -27,6 +27,8 @@ ADSGiantPickup::ADSGiantPickup()
 	NetUpdateFrequency = 30.f; // objet "critique" (GDD 14)
 	bAlwaysRelevant = true;
 	InteractRadius = 420.f;
+	LabelHeight = 380.f;
+	LabelColor = FLinearColor(0.5f, 0.3f, 0.1f);
 	Priority = 4;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
@@ -200,6 +202,11 @@ void ADSGiantPickup::Tick(float DeltaSeconds)
 	ServerMove(DeltaSeconds);
 	for (TActorIterator<ADSCounter> It(GetWorld()); It; ++It)
 		if (FVector::Dist2D(It->GetActorLocation(), GetActorLocation()) < 560.f) { Deliver(); break; }
+}
+
+FText ADSGiantPickup::GetStationLabel() const
+{
+	return bDelivered ? FText::GetEmpty() : FText::Format(LOCTEXT("StGiant", "{0} : a porter jusqu'au comptoir ({1} porteurs)"), DisplayName, Carry->GetRequiredCarriers());
 }
 
 #undef LOCTEXT_NAMESPACE

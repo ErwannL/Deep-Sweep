@@ -2,6 +2,7 @@
 #include "Core/DSUserSettings.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
 #include "Styling/CoreStyle.h"
+#include "Sound/SoundBase.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
@@ -47,6 +48,8 @@ namespace DSUI
 		S->SetDisabled(*Rounded(FLinearColor(0.2f, 0.2f, 0.22f, 0.8f), 14.f));
 		S->SetNormalPadding(FMargin(18.f, 10.f));
 		S->SetPressedPadding(FMargin(18.f, 12.f, 18.f, 8.f));
+		if (USoundBase* ClickSnd = LoadObject<USoundBase>(nullptr, TEXT("/Game/Audio/Sfx/click_001.click_001"))) { ClickSnd->AddToRoot(); FSlateSound Snd; Snd.SetResourceObject(ClickSnd); S->SetPressedSound(Snd); }
+		if (USoundBase* HoverSnd = LoadObject<USoundBase>(nullptr, TEXT("/Game/Audio/Sfx/rollover2.rollover2"))) { HoverSnd->AddToRoot(); FSlateSound Snd; Snd.SetResourceObject(HoverSnd); S->SetHoveredSound(Snd); }
 		GButtons.Add(Key, S);
 		return S.Get();
 	}

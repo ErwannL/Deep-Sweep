@@ -32,6 +32,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Upgrade") int32 Cost = 30;
 
 	virtual FText GetPrompt(const ADSDiver* Diver) const override;
+	virtual FText GetStationLabel() const override;
 	virtual void Interact(ADSDiver* Diver) override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;

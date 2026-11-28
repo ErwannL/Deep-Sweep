@@ -32,10 +32,19 @@ for (name, cat, shape, scale, color, emi, value, kg, sink, radius, count, fragil
         f = unreal.DataAssetFactory()
         f.set_editor_property("data_asset_class", unreal.DSPickupData)
         da = tools.create_asset(f"DA_{name}", FOLDER, unreal.DSPickupData, f)
-    for k, v in dict(type_id=name, display_name=name, category=cat, mesh=mesh(shape), mesh_scale=scale,
+    built = f"/Game/Meshes/Pickups/SM_{name}"
+    if EAL.does_asset_exist(built):
+        mesh_asset, scale = unreal.load_asset(built), V(1, 1, 1)
+    else:
+        mesh_asset = mesh(shape)
+    for k, v in dict(type_id=name, display_name=name, category=cat, mesh=mesh_asset, mesh_scale=scale,
                      color=color, emissive=emi, value=value, mass_kg=kg, sink=sink, radius=float(radius),
                      spawn_count=count, fragile=fragile, clogs=clogs).items():
         da.set_editor_property(k, v)
+    metal, rough = {"Canette": (0.9, 0.3), "Bouteille": (0.0, 0.12), "Ferraille": (0.85, 0.55), "Pneu": (0.0, 0.92),
+                    "Caddie": (0.9, 0.35), "Vase": (0.5, 0.22)}[name]
+    da.set_editor_property("metallic", metal)
+    da.set_editor_property("roughness", rough)
     EAL.save_loaded_asset(da)
 
 total = sum(t[10] for t in TYPES)

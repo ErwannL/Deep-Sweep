@@ -22,6 +22,7 @@ public:
 
 	virtual bool CanInteract(const ADSDiver* Diver) const override;
 	virtual FText GetPrompt(const ADSDiver* Diver) const override;
+	virtual FText GetStationLabel() const override;
 	virtual void Interact(ADSDiver* Diver) override;
 	virtual void BeginPlay() override;
 

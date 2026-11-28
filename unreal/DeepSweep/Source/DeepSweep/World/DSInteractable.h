@@ -24,6 +24,10 @@ public:
 	virtual bool CanInteract(const ADSDiver* Diver) const { return true; }
 	/** Texte d'aide affiche quand le plongeur est a portee. */
 	virtual FText GetPrompt(const ADSDiver* Diver) const { return FText::GetEmpty(); }
+	/** Panneau flottant affiche au-dessus de la station (vide = aucun). */
+	virtual FText GetStationLabel() const { return FText::GetEmpty(); }
+	UPROPERTY(EditAnywhere, Category = "Interact") float LabelHeight = 300.f;
+	UPROPERTY(EditAnywhere, Category = "Interact") FLinearColor LabelColor = FLinearColor(0.05f, 0.25f, 0.4f);
 	/** Serveur. */
 	virtual void Interact(ADSDiver* Diver) {}
 

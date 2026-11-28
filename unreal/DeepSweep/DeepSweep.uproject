@@ -13,6 +13,7 @@
 		{ "Name": "EnhancedInput", "Enabled": true },
 		{ "Name": "Niagara", "Enabled": true },
 		{ "Name": "CableComponent", "Enabled": true },
+		{ "Name": "GeometryScripting", "Enabled": true },
 		{ "Name": "OnlineSubsystem", "Enabled": true },
 		{ "Name": "OnlineSubsystemNull", "Enabled": true },
 		{ "Name": "OnlineSubsystemUtils", "Enabled": true }

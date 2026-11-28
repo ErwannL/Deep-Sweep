@@ -9,6 +9,7 @@
 #include "Core/DSGameState.h"
 #include "Core/DSPlayerState.h"
 #include "FX/DSPopupText.h"
+#include "FX/DSFX.h"
 #include "DeepSweep.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -25,6 +26,8 @@ ADSVacuumNozzle::ADSVacuumNozzle()
 	PrimaryActorTick.TickGroup = TG_PrePhysics;
 	SetReplicatingMovement(true);
 	InteractRadius = 260.f;
+	LabelHeight = 130.f;
+	LabelColor = FLinearColor(0.75f, 0.12f, 0.1f);
 	Priority = 8;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cone(TEXT("/Engine/BasicShapes/Cone.Cone"));
@@ -184,6 +187,16 @@ void ADSVacuumNozzle::Tick(float DeltaSeconds)
 	}
 	else Mouth->SetRelativeLocation(FVector::ZeroVector);
 
+	if (bSucking)
+	{
+		SwirlTimer -= DeltaSeconds;
+		if (SwirlTimer <= 0.f)
+		{
+			SwirlTimer = 0.12f;
+			const float R = Vacuum->GetSuctionRadius();
+			ADSFXBurst::Play(this, EDSFX::Bubbles, GetActorLocation() + GetActorForwardVector() * FMath::FRandRange(0.3f, 0.9f) * R + FMath::VRand() * R * 0.25f, 0.3f);
+		}
+	}
 	if (HasAuthority() && bSucking) ServerSuck(DeltaSeconds);
 
 	// Limite du tuyau : le porteur est retenu au-dela de la longueur.
@@ -282,6 +295,11 @@ void ADSVacuumNozzle::SuckDivers(float DeltaSeconds, float R)
 void ADSVacuumNozzle::Multicast_Popup_Implementation(FVector_NetQuantize Location, const FText& Text, FColor Color)
 {
 	ADSPopupText::Spawn(this, Location, Text, Color, 80.f);
+}
+
+FText ADSVacuumNozzle::GetStationLabel() const
+{
+	return Holder ? FText::GetEmpty() : LOCTEXT("StNozzle", "BUSE DE L'ASPIRATEUR");
 }
 
 #undef LOCTEXT_NAMESPACE

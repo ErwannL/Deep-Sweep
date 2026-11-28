@@ -61,6 +61,8 @@ void ADSPickupManager::BeginPlay()
 			{
 				MID->SetVectorParameterValue(TEXT("Color"), T->Color);
 				MID->SetScalarParameterValue(TEXT("Emissive"), FMath::Max(T->Emissive, 0.12f));
+				MID->SetScalarParameterValue(TEXT("Metallic"), T->Metallic);
+				MID->SetScalarParameterValue(TEXT("Roughness"), T->Roughness);
 			}
 		}
 		TypeISMs.Add(ISM);

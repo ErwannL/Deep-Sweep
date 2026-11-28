@@ -3,6 +3,7 @@
 #include "DeepSweep.h"
 #include "Player/DSDiver.h"
 #include "Kismet/GameplayStatics.h"
+#include "FX/DSFX.h"
 #include "HAL/IConsoleManager.h"
 #include "Engine/World.h"
 
@@ -54,6 +55,19 @@ void ADSGameState::Multicast_Toast_Implementation(const FText& Message)
 void ADSGameState::Multicast_Sfx_Implementation(EDSSfx Sfx, FVector_NetQuantize Location, float Shake)
 {
 	if (UDSAudioSubsystem* A = GetWorld()->GetSubsystem<UDSAudioSubsystem>()) A->PlaySfx(Sfx, Location);
+	if (!Location.IsZero())
+		switch (Sfx)
+		{
+		case EDSSfx::Slurp: ADSFXBurst::Play(this, EDSFX::Bubbles, Location, 0.6f); break;
+		case EDSSfx::Clog: case EDSSfx::Bonk: case EDSSfx::Jam: ADSFXBurst::Play(this, EDSFX::Sparks, Location); break;
+		case EDSSfx::Unclog: ADSFXBurst::Play(this, EDSFX::BigBubbles, Location, 0.7f); break;
+		case EDSSfx::Break: ADSFXBurst::Play(this, EDSFX::Shards, Location); break;
+		case EDSSfx::Recycled: ADSFXBurst::Play(this, EDSFX::BigBubbles, Location); break;
+		case EDSSfx::Jingle: ADSFXBurst::Play(this, EDSFX::Confetti, Location + FVector(0, 0, 200.f), 1.3f); ADSFXBurst::Play(this, EDSFX::Coins, Location, 1.5f); break;
+		case EDSSfx::Buy: ADSFXBurst::Play(this, EDSFX::Confetti, Location + FVector(0, 0, 150.f)); break;
+		case EDSSfx::Splash: ADSFXBurst::Play(this, EDSFX::Ink, Location, 1.2f); break;
+		default: break;
+		}
 	if (Shake > 0.f)
 		if (ADSDiver* Me = Cast<ADSDiver>(UGameplayStatics::GetPlayerPawn(this, 0)))
 			Me->AddShake(Shake * FMath::Clamp(1.3f - FVector::Dist(Me->GetActorLocation(), Location) / 4000.f, 0.f, 1.f));

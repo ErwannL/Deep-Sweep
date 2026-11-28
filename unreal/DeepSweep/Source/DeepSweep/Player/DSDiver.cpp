@@ -29,6 +29,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "Net/DSSessionSubsystem.h"
 #include "Audio/DSAudioSubsystem.h"
+#include "FX/DSFX.h"
 #include "Player/DSPlayerController.h"
 #include "Core/DSUserSettings.h"
 #include "Framework/Application/SlateApplication.h"
@@ -646,6 +647,7 @@ void ADSDiver::GrabPressed()
 	{
 		Grab->RequestGrab(Target);
 		if (UDSAudioSubsystem* A = GetWorld()->GetSubsystem<UDSAudioSubsystem>()) A->PlaySfx(EDSSfx::Grab, FVector::ZeroVector); // retour immediat
+		ADSFXBurst::Play(this, EDSFX::Bubbles, Target->GetActorLocation(), 0.5f);
 	}
 	else if (Grab->NumHeld() > 0) Grab->RequestDrop();
 }
@@ -767,6 +769,15 @@ void ADSDiver::Tick(float DeltaSeconds)
 		Shake = FMath::Max(0.f, Shake - DeltaSeconds * 2.5f);
 		const float T = GetWorld()->GetTimeSeconds();
 		Camera->SetRelativeLocation(Shake > 0.f ? FVector(0.f, FMath::Sin(T * 61.f), FMath::Sin(T * 47.f + 1.f)) * Shake * Shake * 30.f : FVector::ZeroVector);
+	}
+
+	// Bulles du casque (respiration) et sillage quand on nage vite (cosmetique, chez tout le monde)
+	BubbleTimer -= DeltaSeconds;
+	if (BubbleTimer <= 0.f && GetNetMode() != NM_DedicatedServer)
+	{
+		const float Speed = GetVelocity().Size();
+		BubbleTimer = Speed > 500.f ? 0.25f : FMath::FRandRange(1.4f, 2.4f);
+		ADSFXBurst::Play(this, EDSFX::Bubbles, GetActorLocation() + GetActorForwardVector() * 30.f + FVector(0, 0, 70.f), Speed > 500.f ? 0.35f : 0.25f);
 	}
 
 	// Cosmetique : inclinaison vers la direction de nage + leger flottement

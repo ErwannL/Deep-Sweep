@@ -86,11 +86,13 @@ void ADSPickup::ApplyType()
 	Mesh->SetWorldScale3D(Type->MeshScale);
 	Mesh->SetMassOverrideInKg(NAME_None, Type->MassKg, true);
 	Buoyancy->Sink = Type->Sink;
-	if (UMaterialInstanceDynamic* MID = Mesh->CreateDynamicMaterialInstance(0, UDSPickupSubsystem::GetColorMaterial()))
+	for (int32 Slot = 0; Slot < FMath::Max(1, Mesh->GetNumMaterials()); ++Slot)
+	if (UMaterialInstanceDynamic* MID = Mesh->CreateDynamicMaterialInstance(Slot, UDSPickupSubsystem::GetColorMaterial()))
 	{
 		MID->SetVectorParameterValue(TEXT("Color"), Type->Color);
+		MID->SetScalarParameterValue(TEXT("Metallic"), Type->Metallic);
 		MID->SetScalarParameterValue(TEXT("Emissive"), FMath::Max(Type->Emissive, 0.12f)); // lisible a travers le bleu
-		MID->SetScalarParameterValue(TEXT("Roughness"), Type->Category == EDSPickupCategory::Precious ? 0.2f : 0.5f);
+		MID->SetScalarParameterValue(TEXT("Roughness"), Type->Roughness);
 	}
 }
 

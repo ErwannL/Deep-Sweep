@@ -85,6 +85,38 @@ void UDSAudioSubsystem::PlayTones(const TArray<FDSTone>& Tones, float Gain)
 	}
 }
 
+bool UDSAudioSubsystem::PlaySample(EDSSfx Sfx, float Gain, float Pitch)
+{
+	// Bruitages Kenney (CC0) ; variantes tirees au hasard
+	static const TMap<EDSSfx, TArray<const TCHAR*>> Map = {
+		{ EDSSfx::Grab, { TEXT("pluck_001"), TEXT("pluck_002") } },
+		{ EDSSfx::Throw, { TEXT("impactSoft_medium_000"), TEXT("impactSoft_medium_001"), TEXT("impactSoft_medium_002") } },
+		{ EDSSfx::Sale, { TEXT("select_001"), TEXT("select_002"), TEXT("select_003") } },
+		{ EDSSfx::Clog, { TEXT("impactMetal_heavy_000"), TEXT("impactMetal_heavy_001") } },
+		{ EDSSfx::Bonk, { TEXT("impactPlate_heavy_000"), TEXT("impactPlate_heavy_001") } },
+		{ EDSSfx::Unclog, { TEXT("confirmation_001") } },
+		{ EDSSfx::Break, { TEXT("impactGlass_heavy_000"), TEXT("impactGlass_heavy_001") } },
+		{ EDSSfx::Recycled, { TEXT("impactPunch_heavy_000") } },
+		{ EDSSfx::Jingle, { TEXT("confirmation_004") } },
+		{ EDSSfx::Buy, { TEXT("confirmation_002") } },
+		{ EDSSfx::Splash, { TEXT("impactSoft_heavy_000"), TEXT("impactSoft_heavy_001") } },
+		{ EDSSfx::Jam, { TEXT("impactMetal_heavy_001") } },
+		{ EDSSfx::Alarm, { TEXT("error_006") } },
+		{ EDSSfx::Denied, { TEXT("error_001") } },
+		{ EDSSfx::UIClick, { TEXT("click_001") } },
+		{ EDSSfx::UIHover, { TEXT("rollover2") } },
+		{ EDSSfx::Land, { TEXT("impactGeneric_light_000"), TEXT("impactGeneric_light_001"), TEXT("impactTin_medium_000") } },
+	};
+	const TArray<const TCHAR*>* Names = Map.Find(Sfx);
+	if (!Names || Names->Num() == 0) return false;
+	const FString Name = (*Names)[FMath::RandRange(0, Names->Num() - 1)];
+	TObjectPtr<USoundBase>& Snd = Loaded.FindOrAdd(Name);
+	if (!Snd) Snd = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Audio/Sfx/%s.%s"), *Name, *Name));
+	if (!Snd) return false;
+	UGameplayStatics::PlaySound2D(GetWorld(), Snd, Gain, Pitch * FMath::FRandRange(0.94f, 1.06f));
+	return true;
+}
+
 void UDSAudioSubsystem::PlaySfx(EDSSfx Sfx, const FVector& Location)
 {
 	if (!CanPlay()) return;
@@ -124,8 +156,11 @@ void UDSAudioSubsystem::PlaySfx(EDSSfx Sfx, const FVector& Location)
 	case EDSSfx::Jam: S = { { 140.f, 0.4f, T::Saw, 0.1f, -60.f } }; break;
 	case EDSSfx::Alarm: S = { { 880.f, 0.12f, T::Square, 0.07f, 0, 0.f }, { 660.f, 0.12f, T::Square, 0.07f, 0, 0.15f } }; break;
 	case EDSSfx::Denied: S = { { 200.f, 0.15f, T::Square, 0.07f, -60.f } }; break;
+	default: break;
 	}
 	if (const UDSUserSettings* Set = UDSUserSettings::Get(this)) Gain *= Set->SfxVolume;
+	const float Pitch = Sfx == EDSSfx::Sale ? 1.f + FMath::Min(Combo, 20) * 0.035f : 1.f;
+	if (PlaySample(Sfx, Gain, Pitch) && Sfx != EDSSfx::Recycled) return; // le "whoosh" synthetise accompagne le recyclage
 	PlayTones(S, Gain);
 }
 

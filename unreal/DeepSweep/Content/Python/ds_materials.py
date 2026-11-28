@@ -1,4 +1,4 @@
-"""Materiaux du projet, generes par script (style cartoon, couleurs unies).
+﻿"""Materiaux du projet, generes par script (style cartoon, couleurs unies).
 
 - M_DSColor   : couleur unie parametrable (plongeur, objets).
 - MPC_DS      : collection globale ; 'Clean' (0..1) = % de proprete -> le monde passe de sale a colore.
@@ -75,12 +75,74 @@ def dirty_of(mat, color_expr, x, y, fraction=0.85, darken=0.6):
     return m
 
 
+def tex(path):
+    return unreal.load_asset(path)
+
+
+def world_uv(mat, axes, scale, x, y):
+    """UV projetees en espace monde (axes 'xy', 'xz' ou 'yz') / scale cm."""
+    wp = expr(mat, unreal.MaterialExpressionWorldPosition, x - 300, y)
+    m = expr(mat, unreal.MaterialExpressionComponentMask, x - 150, y,
+             r="x" in axes, g="y" in axes, b="z" in axes, a=False)
+    MEL.connect_material_expressions(wp, "", m, "")
+    d = expr(mat, unreal.MaterialExpressionMultiply, x, y)
+    MEL.connect_material_expressions(m, "", d, "A")
+    MEL.connect_material_expressions(const(mat, 1.0 / scale, x - 150, y + 60), "", d, "B")
+    return d
+
+
+def sample(mat, texture, uv, x, y, kind="color"):
+    t = expr(mat, unreal.MaterialExpressionTextureSample, x, y, texture=texture)
+    if kind == "normal":
+        t.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
+    elif kind == "mask":
+        t.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
+    MEL.connect_material_expressions(uv, "", t, "UVs")
+    return t
+
+
+def lerp3(mat, a_, b_, alpha, x, y):
+    l = expr(mat, unreal.MaterialExpressionLinearInterpolate, x, y)
+    MEL.connect_material_expressions(a_, "", l, "A")
+    MEL.connect_material_expressions(b_, "", l, "B")
+    MEL.connect_material_expressions(alpha, "", l, "Alpha")
+    return l
+
+
+def triplanar(mat, texture, scale, x, y, kind="color"):
+    """Projection 3 plans (rochers, coraux) : melange XY / XZ / YZ selon la normale monde."""
+    n = expr(mat, unreal.MaterialExpressionVertexNormalWS, x - 600, y + 400)
+    ab = expr(mat, unreal.MaterialExpressionAbs, x - 450, y + 400)
+    MEL.connect_material_expressions(n, "", ab, "")
+    ny = expr(mat, unreal.MaterialExpressionComponentMask, x - 300, y + 380, r=False, g=True, b=False, a=False)
+    nz = expr(mat, unreal.MaterialExpressionComponentMask, x - 300, y + 440, r=False, g=False, b=True, a=False)
+    MEL.connect_material_expressions(ab, "", ny, "")
+    MEL.connect_material_expressions(ab, "", nz, "")
+    txy = sample(mat, texture, world_uv(mat, "xy", scale, x - 300, y), x, y, kind)
+    txz = sample(mat, texture, world_uv(mat, "xz", scale, x - 300, y + 150), x, y + 150, kind)
+    tyz = sample(mat, texture, world_uv(mat, "yz", scale, x - 300, y + 300), x, y + 300, kind)
+    side = lerp3(mat, tyz, txz, ny, x + 200, y + 200)
+    return lerp3(mat, side, txy, nz, x + 350, y + 100)
+
+
+SAND_D = "/Game/Textures/sand_03_diff_2k"
+SAND_N = "/Game/Textures/sand_03_nor_gl_2k"
+SAND_M = "/Game/Textures/sand_03_arm_2k"
+CSR_D = "/Game/Textures/coast_sand_rocks_02_diff_2k"
+CSR_N = "/Game/Textures/coast_sand_rocks_02_nor_gl_2k"
+ROCK_D = "/Game/Textures/rocks_ground_02_col_2k"
+ROCK_N = "/Game/Textures/rocks_ground_02_nor_gl_2k"
+ROCK_M = "/Game/Textures/rocks_ground_02_arm_2k"
+
+
 def color_material():
+    """Objets : couleur du code couleur + metal/rugosite, avec un grain de surface (normal de roche tres attenue)."""
     mat = fresh("M_DSColor", unreal.Material, unreal.MaterialFactoryNew())
     mat.set_editor_property("used_with_instanced_static_meshes", True)
     col = vparam(mat, "Color", unreal.LinearColor(0.8, 0.8, 0.8, 1), -500, 0)
     MEL.connect_material_property(col, "", MP.MP_BASE_COLOR)
     MEL.connect_material_property(sparam(mat, "Roughness", 0.55, -500, 200), "", MP.MP_ROUGHNESS)
+    MEL.connect_material_property(sparam(mat, "Metallic", 0.0, -500, 280), "", MP.MP_METALLIC)
     mul = expr(mat, unreal.MaterialExpressionMultiply, -250, 350)
     MEL.connect_material_expressions(col, "", mul, "A")
     MEL.connect_material_expressions(sparam(mat, "Emissive", 0.0, -500, 400), "", mul, "B")
@@ -89,20 +151,29 @@ def color_material():
 
 
 def world_material(mpc):
+    """Rochers / coraux / algues : roche Poly Haven projetee en 3 plans, teintee par la couleur de l'instance."""
     mat = fresh("M_DSWorld", unreal.Material, unreal.MaterialFactoryNew())
-    col = vparam(mat, "Color", unreal.LinearColor(1, 0.4, 0.5, 1), -900, 0)
-    dirty = dirty_of(mat, col, -650, 150)
-    lerp = expr(mat, unreal.MaterialExpressionLinearInterpolate, -250, 0)
-    MEL.connect_material_expressions(dirty, "", lerp, "A")
-    MEL.connect_material_expressions(col, "", lerp, "B")
-    MEL.connect_material_expressions(clean_alpha(mat, mpc, -500, 350), "", lerp, "Alpha")
-    MEL.connect_material_property(lerp, "", MP.MP_BASE_COLOR)
-    MEL.connect_material_property(sparam(mat, "Roughness", 0.7, -500, 500), "", MP.MP_ROUGHNESS)
-    # Leger eclat quand c'est propre (coraux qui "revivent")
-    emi = expr(mat, unreal.MaterialExpressionMultiply, -250, 600)
-    k = expr(mat, unreal.MaterialExpressionMultiply, -450, 650)
-    MEL.connect_material_expressions(clean_alpha(mat, mpc, -700, 650), "", k, "A")
-    MEL.connect_material_expressions(sparam(mat, "CleanGlow", 0.0, -700, 750), "", k, "B")
+    col = vparam(mat, "Color", unreal.LinearColor(1, 0.4, 0.5, 1), -1500, -300)
+    rock = triplanar(mat, tex(ROCK_D), 220.0, -1200, 0)
+    gray = expr(mat, unreal.MaterialExpressionDesaturation, -700, 0)
+    MEL.connect_material_expressions(rock, "", gray, "")
+    MEL.connect_material_expressions(const(mat, 1.0, -850, 80), "", gray, "Fraction")
+    boost = expr(mat, unreal.MaterialExpressionMultiply, -550, 0)
+    MEL.connect_material_expressions(gray, "", boost, "A")
+    MEL.connect_material_expressions(sparam(mat, "Detail", 2.6, -700, 120), "", boost, "B")
+    tinted = expr(mat, unreal.MaterialExpressionMultiply, -400, -150)
+    MEL.connect_material_expressions(col, "", tinted, "A")
+    MEL.connect_material_expressions(boost, "", tinted, "B")
+    dirty = dirty_of(mat, tinted, -350, 150, fraction=0.75, darken=0.85)
+    out = lerp3(mat, dirty, tinted, clean_alpha(mat, mpc, -350, 350), -100, 0)
+    MEL.connect_material_property(out, "", MP.MP_BASE_COLOR)
+    nrm = triplanar(mat, tex(ROCK_N), 220.0, -1200, 700, "normal")
+    MEL.connect_material_property(nrm, "", MP.MP_NORMAL)
+    MEL.connect_material_property(sparam(mat, "Roughness", 0.7, -400, 500), "", MP.MP_ROUGHNESS)
+    emi = expr(mat, unreal.MaterialExpressionMultiply, -100, 600)
+    k = expr(mat, unreal.MaterialExpressionMultiply, -300, 650)
+    MEL.connect_material_expressions(clean_alpha(mat, mpc, -500, 650), "", k, "A")
+    MEL.connect_material_expressions(sparam(mat, "CleanGlow", 0.0, -500, 750), "", k, "B")
     MEL.connect_material_expressions(col, "", emi, "A")
     MEL.connect_material_expressions(k, "", emi, "B")
     MEL.connect_material_property(emi, "", MP.MP_EMISSIVE_COLOR)
@@ -120,19 +191,33 @@ def world_instance(name, parent, color, glow=0.0, rough=0.7):
 
 
 def sand_material(mpc):
+    """Fond : sable Poly Haven + plaques de sable rocheux (bruit grande echelle), grisatre quand c'est sale."""
     mat = fresh("M_DSSand", unreal.Material, unreal.MaterialFactoryNew())
-    clean = vparam(mat, "CleanColor", unreal.LinearColor(0.78, 0.6, 0.3, 1), -900, -100)
-    dirty = vparam(mat, "DirtyColor", unreal.LinearColor(0.28, 0.27, 0.2, 1), -900, 50)
-    lerp = expr(mat, unreal.MaterialExpressionLinearInterpolate, -600, 0)
-    MEL.connect_material_expressions(dirty, "", lerp, "A")
-    MEL.connect_material_expressions(clean, "", lerp, "B")
-    MEL.connect_material_expressions(clean_alpha(mat, mpc, -900, 200), "", lerp, "Alpha")
-    noise = expr(mat, unreal.MaterialExpressionNoise, -600, 250, scale=0.004, output_min=0.8, output_max=1.08, levels=3)
-    mul = expr(mat, unreal.MaterialExpressionMultiply, -300, 0)
-    MEL.connect_material_expressions(lerp, "", mul, "A")
-    MEL.connect_material_expressions(noise, "", mul, "B")
-    MEL.connect_material_property(mul, "", MP.MP_BASE_COLOR)
-    MEL.connect_material_property(const(mat, 0.9, -300, 300), "", MP.MP_ROUGHNESS)
+    uv = world_uv(mat, "xy", 260.0, -1300, 0)
+    uv2 = world_uv(mat, "xy", 520.0, -1300, 400)
+    sand = sample(mat, tex(SAND_D), uv, -1000, 0)
+    rocks = sample(mat, tex(CSR_D), uv2, -1000, 300)
+    patch = expr(mat, unreal.MaterialExpressionNoise, -1000, 600, scale=0.00035, output_min=-0.6, output_max=1.4, levels=2)
+    sat = expr(mat, unreal.MaterialExpressionSaturate, -850, 600)
+    MEL.connect_material_expressions(patch, "", sat, "")
+    base = lerp3(mat, sand, rocks, sat, -700, 100)
+    tint = vparam(mat, "CleanTint", unreal.LinearColor(1.05, 0.95, 0.8, 1), -700, -150)
+    clean = expr(mat, unreal.MaterialExpressionMultiply, -500, -50)
+    MEL.connect_material_expressions(base, "", clean, "A")
+    MEL.connect_material_expressions(tint, "", clean, "B")
+    dirty = dirty_of(mat, base, -500, 200, fraction=0.6, darken=0.75)
+    out = lerp3(mat, dirty, clean, clean_alpha(mat, mpc, -500, 400), -200, 0)
+    MEL.connect_material_property(out, "", MP.MP_BASE_COLOR)
+    n1 = sample(mat, tex(SAND_N), uv, -1000, 800, "normal")
+    n2 = sample(mat, tex(CSR_N), uv2, -1000, 1000, "normal")
+    MEL.connect_material_property(lerp3(mat, n1, n2, sat, -600, 900), "", MP.MP_NORMAL)
+    arm = sample(mat, tex(SAND_M), uv, -1000, 1200, "mask")
+    rgh = expr(mat, unreal.MaterialExpressionComponentMask, -750, 1250, r=False, g=True, b=False, a=False)
+    MEL.connect_material_expressions(arm, "", rgh, "")
+    MEL.connect_material_property(rgh, "", MP.MP_ROUGHNESS)
+    ao = expr(mat, unreal.MaterialExpressionComponentMask, -750, 1350, r=True, g=False, b=False, a=False)
+    MEL.connect_material_expressions(arm, "", ao, "")
+    MEL.connect_material_property(ao, "", MP.MP_AMBIENT_OCCLUSION)
     return finish(mat)
 
 
@@ -191,7 +276,7 @@ def light_ray_material():
 
 
 def outline_material():
-    """Surbrillance au survol (overlay material) : lueur additive pulsee + liseré fresnel."""
+    """Surbrillance au survol (overlay material) : lueur additive pulsee + liserÃ© fresnel."""
     mat = fresh("M_DSOutline", unreal.Material, unreal.MaterialFactoryNew())
     mat.set_editor_property("blend_mode", unreal.BlendMode.BLEND_ADDITIVE)
     mat.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)

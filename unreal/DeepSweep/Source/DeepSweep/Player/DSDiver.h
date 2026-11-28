@@ -123,6 +123,7 @@ private:
 	TWeakObjectPtr<ADSVacuumNozzle> HeldNozzle;
 	float CarrySpeedFactor = 1.f;
 	float Shake = 0.f;
+	float BubbleTimer = 0.f;
 	float BobTime = 0.f;
 	FRotator VisualTilt = FRotator::ZeroRotator;
 };

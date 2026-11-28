@@ -29,6 +29,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual") FVector MeshScale = FVector(1.f);
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual") FLinearColor Color = FLinearColor::Gray;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual") float Emissive = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual") float Metallic = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual") float Roughness = 0.5f;
 
 	/** Valeur de vente (credits). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Economy") int32 Value = 1;

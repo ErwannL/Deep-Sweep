@@ -11,7 +11,7 @@ class UAudioComponent;
 UENUM()
 enum class EDSSfx : uint8
 {
-	Grab, Throw, Sale, Slurp, Clog, Bonk, Unclog, Break, Recycled, Jingle, BigJingle, OctoArrive, Splash, Jam, Alarm, Buy, Denied
+	Grab, Throw, Sale, Slurp, Clog, Bonk, Unclog, Break, Recycled, Jingle, BigJingle, OctoArrive, Splash, Jam, Alarm, Buy, Denied, UIClick, UIHover, Land
 };
 
 /** Une note de synthese (comme le prototype WebAudio). */
@@ -72,4 +72,6 @@ private:
 	float ComboTimer = 0.f;
 	float LastSlurp = -1.f;
 	bool CanPlay() const;
+	bool PlaySample(EDSSfx Sfx, float Gain, float Pitch);
+	UPROPERTY(Transient) TMap<FString, TObjectPtr<USoundBase>> Loaded;
 };

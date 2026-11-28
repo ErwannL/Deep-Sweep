@@ -9,6 +9,7 @@
 #include "Core/DSPlayerState.h"
 #include "FX/DSPopupText.h"
 #include "Audio/DSAudioSubsystem.h"
+#include "FX/DSFX.h"
 #include "DeepSweep.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -21,6 +22,8 @@
 ADSCounter::ADSCounter()
 {
 	InteractRadius = 450.f;
+	LabelHeight = 480.f;
+	LabelColor = FLinearColor(0.05f, 0.55f, 0.25f);
 	Priority = 5;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
@@ -134,8 +137,14 @@ void ADSCounter::SellValue(int32 Value, AActor* Seller, const FVector& PopupLoca
 void ADSCounter::Multicast_SaleFX_Implementation(int32 Value, FVector_NetQuantize Location)
 {
 	if (UDSAudioSubsystem* A = GetWorld()->GetSubsystem<UDSAudioSubsystem>()) A->PlaySfx(EDSSfx::Sale, Location);
+	ADSFXBurst::Play(this, EDSFX::Coins, Location, FMath::Clamp(Value / 10.f, 0.6f, 2.f));
 	ADSPopupText::Spawn(this, Location + FVector(FMath::FRandRange(-60.f, 60.f), FMath::FRandRange(-60.f, 60.f), 0.f),
 		FText::Format(LOCTEXT("SalePopup", "+{0}"), Value), FColor(255, 230, 60));
+}
+
+FText ADSCounter::GetStationLabel() const
+{
+	return LOCTEXT("StCounter", "COMPTOIR : vends tes dechets ici");
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -81,6 +81,9 @@ protected:
 	UPROPERTY(Replicated) int32 JamId = INDEX_NONE;
 
 	FVector GetJamLocation() const;
+public:
+	FVector GetJamWorldLocation() const { return GetJamLocation(); }
+protected:
 	FTransform ItemTransform(const FDSBeltItem& It) const;
 	void ServerAdvance(float DeltaSeconds);
 	void ServerCatchFallenPickups();

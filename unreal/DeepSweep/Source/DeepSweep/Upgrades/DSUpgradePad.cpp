@@ -22,6 +22,8 @@ ADSUpgradePad::ADSUpgradePad()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	InteractRadius = 200.f;
+	LabelHeight = 330.f;
+	LabelColor = FLinearColor(0.45f, 0.15f, 0.65f);
 	Priority = 3;
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cyl(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Sph(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
@@ -125,6 +127,12 @@ void ADSUpgradePad::Tick(float DeltaSeconds)
 			MID->SetVectorParameterValue(TEXT("Color"), DiscCol);
 			MID->SetScalarParameterValue(TEXT("Emissive"), bAfford && !bOwned ? 0.6f : 0.1f);
 		}
+}
+
+FText ADSUpgradePad::GetStationLabel() const
+{
+	const ADSGameState* GS = GetWorld() ? GetWorld()->GetGameState<ADSGameState>() : nullptr;
+	return GS && GS->HasUpgrade(Upgrade) ? FText::Format(LOCTEXT("StPadOk", "{0} (achete)"), Title) : FText::Format(LOCTEXT("StPad", "{0} : {1} cr"), Title, Cost);
 }
 
 #undef LOCTEXT_NAMESPACE
